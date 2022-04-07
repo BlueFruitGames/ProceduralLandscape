@@ -15,9 +15,6 @@ public:
 	// Sets default values for this actor's properties
 	AProceduralTile();
 
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
 	UPROPERTY(EditAnywhere, meta = (UIMin = 1))
 	bool bReloadInEditor;//Should the mesh be updated in the editor if changes are made to it's properties?
 
@@ -28,18 +25,24 @@ public:
 	int TileResolution;//Count of vertices on each axis
 
 	UPROPERTY(EditAnywhere, meta = (UIMin = 0))
-	int NoiseStrength; //The influence of the PerlinNoise
+	int MajorNoiseStrength; //The influence of the PerlinNoise
 
 	UPROPERTY(EditAnywhere)
-	FVector2D NoiseOffset; //X and Y offset of the PerlinNoise
+	FVector2D MajorNoiseOffset; //X and Y offset of the PerlinNoise
 
 	UPROPERTY(EditAnywhere)
-	FVector2D NoiseScale;//X and Y scale of the PerlinNoise
+	FVector2D MajorNoiseScale;//X and Y scale of the PerlinNoise
+
+	UPROPERTY(EditAnywhere, meta = (UIMin = 0))
+	int MinorNoiseStrength; //The influence of the PerlinNoise
+
+	UPROPERTY(EditAnywhere)
+	FVector2D MinorNoiseOffset; //X and Y offset of the PerlinNoise
+
+	UPROPERTY(EditAnywhere)
+	FVector2D MinorNoiseScale;//X and Y scale of the PerlinNoise
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
 	virtual void OnConstruction(const FTransform& Transform) override;
 
 private:
@@ -63,7 +66,7 @@ private:
 	float MapToRange(float Value, float MinPrev, float MaxPrev, float MinNew, float MaxNew);
 
 	//Caclulates the Z-Offset at Position(XPos,YPos) using the perlin noise function
-	float GetZOffset(float XPos, float YPos, float Offset);
+	float GetZOffset(float XPos, float YPos, FVector2D NoiseScale, FVector2D NoiseOffset, float NoiseStrength, float Offset);
 
 	//Maps a position to the UV-Space
 	float MapToUV(float Pos, float Offset);

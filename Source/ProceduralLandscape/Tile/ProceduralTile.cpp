@@ -21,19 +21,6 @@ void AProceduralTile::OnConstruction(const FTransform& Transform) {
 	}
 }
 
-// Called when the game starts or when spawned
-void AProceduralTile::BeginPlay()
-{
-	Super::BeginPlay();
-
-}
-
-// Called every frame
-void AProceduralTile::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
-
 void AProceduralTile::GenerateTile() {
 	TArray<FVector> Vertices;
 	TArray<int32> Triangles;
@@ -53,7 +40,9 @@ void AProceduralTile::GenerateTile() {
 			float UPos = MapToUV(CurrentXOffset, StartOffset);
 			float VPos = MapToUV(CurrentYOffset, StartOffset);
 
-			float CurrentZOffset = GetZOffset(UPos, VPos, StartOffset);
+			float MicroZOffset = GetZOffset(UPos, VPos, MinorNoiseScale, MinorNoiseOffset, MinorNoiseStrength, StartOffset);
+			float LargeZOffset = GetZOffset(UPos, VPos, MajorNoiseScale, MajorNoiseOffset, MajorNoiseStrength, StartOffset);
+			float CurrentZOffset = LargeZOffset + MicroZOffset;
 
 			FVector CurrentLocation(CurrentXOffset, CurrentYOffset, CurrentZOffset);
 			Vertices.Add(CurrentLocation);
@@ -63,7 +52,7 @@ void AProceduralTile::GenerateTile() {
 			}
 			Normals.Add(CalculateVertexNormal(CurrentXOffset, CurrentYOffset, StartOffset, DistanceBetweenVertices));
 			UV0.Add(FVector2D(UPos, VPos));
-			VertexColor.Add(FLinearColor(CurrentZOffset, 1 - CurrentZOffset, 0));
+			VertexColor.Add(FLinearColor(CurrentZOffset, 1 - CurrentZOffset, MicroZOffset));
 		}
 	}
 	ProceduralMeshComponent->CreateMeshSection_LinearColor(0, Vertices, Triangles, Normals, UV0, VertexColor, TArray<FProcMeshTangent>(), true);
@@ -91,10 +80,10 @@ FVector AProceduralTile::CalculateVertexNormal(float XPos, float YPos, float Off
 	float Right = MapToUV(XPos + DistanceBetweenVertices, Offset);
 	float Left = MapToUV(XPos - DistanceBetweenVertices, Offset);
 
-	float ZTopLeft = GetZOffset(Left, Top, Offset);
-	float ZTopRight = GetZOffset(Right, Top, Offset);
-	float ZBottomLeft = GetZOffset(Left, Bottom, Offset);
-	float ZBottomRight = GetZOffset(Right, Bottom, Offset);
+	float ZTopLeft = GetZOffset(Left, Top, MajorNoiseScale, MajorNoiseOffset, MajorNoiseStrength ,Offset) + GetZOffset(Left, Top, MinorNoiseScale, MinorNoiseOffset, MinorNoiseStrength, Offset);
+	float ZTopRight = GetZOffset(Right, Top, MajorNoiseScale, MajorNoiseOffset, MajorNoiseStrength, Offset) + GetZOffset(Right, Top, MinorNoiseScale, MinorNoiseOffset, MinorNoiseStrength, Offset);
+	float ZBottomLeft = GetZOffset(Left, Bottom, MajorNoiseScale, MajorNoiseOffset, MajorNoiseStrength, Offset) + GetZOffset(Left, Bottom, MinorNoiseScale, MinorNoiseOffset, MinorNoiseStrength, Offset);
+	float ZBottomRight = GetZOffset(Right, Bottom, MajorNoiseScale, MajorNoiseOffset, MajorNoiseStrength, Offset) + GetZOffset(Right, Bottom, MinorNoiseScale, MinorNoiseOffset, MinorNoiseStrength, Offset);
 
 	FVector TopLeftLocation(XPos - DistanceBetweenVertices, YPos + DistanceBetweenVertices, ZTopLeft);
 	FVector TopRightLocation(XPos + DistanceBetweenVertices, YPos + DistanceBetweenVertices, ZTopRight);
@@ -107,7 +96,7 @@ FVector AProceduralTile::CalculateVertexNormal(float XPos, float YPos, float Off
 	return (Normal_02 + Normal_01 / 2).GetSafeNormal();
 }
 
-float AProceduralTile::GetZOffset(float XPos, float YPos, float Offset) {
+float AProceduralTile::GetZOffset(float XPos, float YPos, FVector2D NoiseScale, FVector2D NoiseOffset, float NoiseStrength, float Offset) {
 
 	float ScaledXPos = MapToRange(XPos, 0, 1, 0, NoiseScale.X);
 	float ScaledYPos = MapToRange(YPos, 0, 1, 0, NoiseScale.Y);
