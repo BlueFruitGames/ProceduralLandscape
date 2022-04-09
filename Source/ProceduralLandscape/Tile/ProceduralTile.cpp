@@ -15,51 +15,46 @@ AProceduralTile::AProceduralTile()
 	SetRootComponent(ProceduralMeshComponent);
 }
 
-void AProceduralTile::OnConstruction(const FTransform& Transform) {
-	if (bReloadInEditor) {
-		GenerateTile();
-	}
-}
-
-void AProceduralTile::GenerateTile() {
+void AProceduralTile::GenerateTile(FTileGenerationParams TileGenerationParams, UMaterialInterface* Material) {
 	TArray<FVector> Vertices;
 	TArray<int32> Triangles;
 	TArray<FVector> Normals;
 	TArray<FVector2D> UV0;
 	TArray<FLinearColor> VertexColor;
 
-	float StartOffset = float(TileSize) / 2;
-	float DistanceBetweenVertices = float(TileSize) / (TileResolution - 1);
+	float StartOffset = float(TileGenerationParams.TileSize) / 2;
+	float DistanceBetweenVertices = float(TileGenerationParams.TileSize) / (TileGenerationParams.TileResolution - 1);
 
-	for (int Row = 0; Row < TileResolution; ++Row) {
-		for (int Column = 0; Column < TileResolution; ++Column) {
+	for (int Row = 0; Row < TileGenerationParams.TileResolution; ++Row) {
+		for (int Column = 0; Column < TileGenerationParams.TileResolution; ++Column) {
 
 			float CurrentXOffset = StartOffset - DistanceBetweenVertices * Row;
 			float CurrentYOffset = StartOffset - DistanceBetweenVertices * Column;
 
-			float UPos = MapToUV(CurrentXOffset, StartOffset);
-			float VPos = MapToUV(CurrentYOffset, StartOffset);
+			float UPos = MapToUV(CurrentXOffset + TileGenerationParams.TileIndex.X * TileGenerationParams.TileSize, StartOffset, TileGenerationParams.TileSize);
+			float VPos = MapToUV(CurrentYOffset + TileGenerationParams.TileIndex.Y * TileGenerationParams.TileSize, StartOffset, TileGenerationParams.TileSize);
 
-			float MicroZOffset = GetZOffset(UPos, VPos, MinorNoiseScale, MinorNoiseOffset, MinorNoiseStrength, StartOffset);
-			float LargeZOffset = GetZOffset(UPos, VPos, MajorNoiseScale, MajorNoiseOffset, MajorNoiseStrength, StartOffset);
+			float MicroZOffset = GetZOffset(UPos, VPos, TileGenerationParams.MinorNoiseScale, TileGenerationParams.MinorNoiseOffset, TileGenerationParams.MinorNoiseStrength, StartOffset);
+			float LargeZOffset = GetZOffset(UPos, VPos, TileGenerationParams.MajorNoiseScale, TileGenerationParams.MajorNoiseOffset, TileGenerationParams.MajorNoiseStrength, StartOffset);
 			float CurrentZOffset = LargeZOffset + MicroZOffset;
 
 			FVector CurrentLocation(CurrentXOffset, CurrentYOffset, CurrentZOffset);
 			Vertices.Add(CurrentLocation);
 
-			if (Row < TileResolution - 1 && Column < TileResolution - 1) {
-				GenerateTriangles(Triangles, Row, Column);
+			if (Row < TileGenerationParams.TileResolution - 1 && Column < TileGenerationParams.TileResolution - 1) {
+				GenerateTriangles(Triangles, Row, Column, TileGenerationParams.TileResolution);
 			}
-			Normals.Add(CalculateVertexNormal(CurrentXOffset, CurrentYOffset, StartOffset, DistanceBetweenVertices));
+			Normals.Add(CalculateVertexNormal(CurrentXOffset + TileGenerationParams.TileIndex.X * TileGenerationParams.TileSize, CurrentYOffset + TileGenerationParams.TileIndex.Y * TileGenerationParams.TileSize, StartOffset, DistanceBetweenVertices, TileGenerationParams));
 			UV0.Add(FVector2D(UPos, VPos));
 			VertexColor.Add(FLinearColor(CurrentZOffset, 1 - CurrentZOffset, MicroZOffset));
 		}
 	}
 	ProceduralMeshComponent->CreateMeshSection_LinearColor(0, Vertices, Triangles, Normals, UV0, VertexColor, TArray<FProcMeshTangent>(), true);
+	ProceduralMeshComponent->SetMaterial(0, Material);
 }
 
 
-void AProceduralTile::GenerateTriangles(TArray<int32>& Triangles, int CurrentRow, int CurrentColumn) {
+void AProceduralTile::GenerateTriangles(TArray<int32>& Triangles, int CurrentRow, int CurrentColumn, int TileResolution) {
 	int Current = (CurrentRow * TileResolution) + CurrentColumn;
 	int Right = Current + 1;
 	int Lower = Current + TileResolution;
@@ -74,16 +69,27 @@ void AProceduralTile::AddTriangle(TArray<int32>& Triangles, int32 V1, int32 V2, 
 	Triangles.Add(V3);
 }
 
-FVector AProceduralTile::CalculateVertexNormal(float XPos, float YPos, float Offset, float DistanceBetweenVertices) {
-	float Top = MapToUV(YPos + DistanceBetweenVertices, Offset);
-	float Bottom = MapToUV(YPos - DistanceBetweenVertices, Offset);
-	float Right = MapToUV(XPos + DistanceBetweenVertices, Offset);
-	float Left = MapToUV(XPos - DistanceBetweenVertices, Offset);
+FVector AProceduralTile::CalculateVertexNormal(float XPos, float YPos, float Offset, float DistanceBetweenVertices, FTileGenerationParams TileGenerationParams) {
+	float Top = MapToUV(YPos + DistanceBetweenVertices, Offset, TileGenerationParams.TileSize);
+	float Bottom = MapToUV(YPos - DistanceBetweenVertices, Offset, TileGenerationParams.TileSize);
+	float Right = MapToUV(XPos + DistanceBetweenVertices, Offset, TileGenerationParams.TileSize);
+	float Left = MapToUV(XPos - DistanceBetweenVertices, Offset, TileGenerationParams.TileSize);
 
-	float ZTopLeft = GetZOffset(Left, Top, MajorNoiseScale, MajorNoiseOffset, MajorNoiseStrength ,Offset) + GetZOffset(Left, Top, MinorNoiseScale, MinorNoiseOffset, MinorNoiseStrength, Offset);
-	float ZTopRight = GetZOffset(Right, Top, MajorNoiseScale, MajorNoiseOffset, MajorNoiseStrength, Offset) + GetZOffset(Right, Top, MinorNoiseScale, MinorNoiseOffset, MinorNoiseStrength, Offset);
-	float ZBottomLeft = GetZOffset(Left, Bottom, MajorNoiseScale, MajorNoiseOffset, MajorNoiseStrength, Offset) + GetZOffset(Left, Bottom, MinorNoiseScale, MinorNoiseOffset, MinorNoiseStrength, Offset);
-	float ZBottomRight = GetZOffset(Right, Bottom, MajorNoiseScale, MajorNoiseOffset, MajorNoiseStrength, Offset) + GetZOffset(Right, Bottom, MinorNoiseScale, MinorNoiseOffset, MinorNoiseStrength, Offset);
+	float ZTopLeftMajor = GetZOffset(Left, Top, TileGenerationParams.MajorNoiseScale, TileGenerationParams.MajorNoiseOffset, TileGenerationParams.MajorNoiseStrength ,Offset);
+	float ZTopLeftMinor = GetZOffset(Left, Top, TileGenerationParams.MinorNoiseScale, TileGenerationParams.MinorNoiseOffset, TileGenerationParams.MinorNoiseStrength, Offset);
+	float ZTopLeft = ZTopLeftMajor + ZTopLeftMinor;
+	
+	float ZTopRightMajor = GetZOffset(Right, Top, TileGenerationParams.MajorNoiseScale, TileGenerationParams.MajorNoiseOffset, TileGenerationParams.MajorNoiseStrength, Offset);
+	float ZTopRightMinor = GetZOffset(Right, Top, TileGenerationParams.MinorNoiseScale, TileGenerationParams.MinorNoiseOffset, TileGenerationParams.MinorNoiseStrength, Offset);
+	float ZTopRight = ZTopRightMajor + ZTopRightMinor;
+	
+	float ZBottomLeftMajor = GetZOffset(Left, Bottom, TileGenerationParams.MajorNoiseScale, TileGenerationParams.MajorNoiseOffset, TileGenerationParams.MajorNoiseStrength, Offset);
+	float ZBottomLeftMinor = GetZOffset(Left, Bottom, TileGenerationParams.MinorNoiseScale, TileGenerationParams.MinorNoiseOffset, TileGenerationParams.MinorNoiseStrength, Offset);
+	float ZBottomLeft = ZBottomLeftMajor + ZBottomLeftMinor;
+	
+	float ZBottomRightMajor = GetZOffset(Right, Bottom, TileGenerationParams.MajorNoiseScale, TileGenerationParams.MajorNoiseOffset, TileGenerationParams.MajorNoiseStrength, Offset);
+	float ZBottomRightMinor = GetZOffset(Right, Bottom, TileGenerationParams.MinorNoiseScale, TileGenerationParams.MinorNoiseOffset, TileGenerationParams.MinorNoiseStrength, Offset);
+	float ZBottomRight = ZBottomRightMajor + ZBottomRightMinor;
 
 	FVector TopLeftLocation(XPos - DistanceBetweenVertices, YPos + DistanceBetweenVertices, ZTopLeft);
 	FVector TopRightLocation(XPos + DistanceBetweenVertices, YPos + DistanceBetweenVertices, ZTopRight);
@@ -105,7 +111,7 @@ float AProceduralTile::GetZOffset(float XPos, float YPos, FVector2D NoiseScale, 
 	return ZOffset;
 }
 
-float AProceduralTile::MapToUV(float Pos, float Offset) {
+float AProceduralTile::MapToUV(float Pos, float Offset, int TileSize) {
 	return (Pos + Offset) / TileSize;
 }
 
