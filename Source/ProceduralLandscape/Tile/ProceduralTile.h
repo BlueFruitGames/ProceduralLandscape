@@ -88,15 +88,37 @@ public:
 	// Sets default values for this actor's properties
 	AProceduralTile();
 
+	UFUNCTION()
+	void OnBeginOverlap (UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	void Setup(class ATileGenerator* Tilegenerator_In, TSubclassOf<class ACharacter> PlayerClass_In, UMaterialInterface* Material);
+	
 	//Procedurally generates a tile using ProceduralMeshComponent
-	void GenerateTile(FTileGenerationParams TileGenerationParams, UMaterialInterface* Material);
+	void GenerateTile(FTileGenerationParams TileGenerationParams, bool bIsUpdate = false);
 
 private:
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
 	class UProceduralMeshComponent* ProceduralMeshComponent;
+
+	UPROPERTY(VisibleAnywhere)
+	class UBoxComponent* BoxComponent;
+
+	UPROPERTY()
+	TSubclassOf<class ACharacter> PlayerClass;
+
+	FTileIndex TileIndex;
+
+	class ATileGenerator* TileGenerator;
 
 	//Generates the triangles vor the vertex at (CurrentRow, CurrentColumn)
 	void GenerateTriangles(TArray<int32>& Triangles, int CurrentRow, int CurrentColumn, int TileResolution);
+
+	//
+	void SetupParamsCreation(FTileGenerationParams TileGenerationParams, TArray<FVector>& Vertices, TArray<int32>& Triangles, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FLinearColor>& VertexColor);
+	
+	void SetupParamsUpdate(FTileGenerationParams TileGenerationParams, TArray<FVector>& Vertices, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FLinearColor>& VertexColor);
+	
+	void GenerateVertexInformation(TArray<FVector>& Vertices, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FLinearColor>& VertexColor, float& MinZOffset, float& MaxZOffset, FTileGenerationParams TileGenerationParams, int Row, int Column, float StartOffset, float DistanceBetweenVertices);
 
 	//Adds a triangle for the Vertices V1, V2, V3
 	void AddTriangle(TArray<int32>& Triangles, int32 V1, int32 V2, int32 V3);
@@ -104,11 +126,11 @@ private:
 	//Calculates the normal of vertex at Position (XPos, YPos)
 	FVector CalculateVertexNormal(float XPos, float YPos, float Offset, float DistanceBetweenVertices, FTileGenerationParams TileGenerationParams);
 
-	// Maps a value from range (MinPrev,MaxPrev) to the value in the new range (MinNew, MaxNew)
-	float MapToRange(float Value, float MinPrev, float MaxPrev, float MinNew, float MaxNew);
-
 	//Caclulates the Z-Offset at Position(XPos,YPos) using the perlin noise function
 	float GetZOffset(float XPos, float YPos, FVector2D NoiseScale, FVector2D NoiseOffset, float NoiseStrength, float Offset);
+
+	// Maps a value from range (MinPrev,MaxPrev) to the value in the new range (MinNew, MaxNew)
+	float MapToRange(float Value, float MinPrev, float MaxPrev, float MinNew, float MaxNew);
 
 	//Maps a position to the UV-Space
 	float MapToUV(float Pos, float Offset, int TileSize);

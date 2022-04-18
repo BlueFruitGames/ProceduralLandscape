@@ -14,13 +14,23 @@ ATileGenerator::ATileGenerator()
 
 void ATileGenerator::OnConstruction(const FTransform& Transform) {
 	if (bReloadInEditor) {
+		CenterTileIndex.X = 0;
+		CenterTileIndex.Y = 0;
 		GenerateTiles();
 	}
 }
 
-void ATileGenerator::GenerateTiles()
+// Called when the game starts or when spawned
+void ATileGenerator::BeginPlay()
 {
-	DeleteAllTiles();
+	Super::BeginPlay();
+	CenterTileIndex.X = 0;
+	CenterTileIndex.Y = 0;
+	GenerateTiles();
+}
+
+FTileGenerationParams ATileGenerator::SetupTileGenerationParams()
+{
 	FTileGenerationParams TileGenerationParams;
 	TileGenerationParams.TileSize = TileSize;
 	TileGenerationParams.TileResolution = TileResolution;
@@ -30,19 +40,62 @@ void ATileGenerator::GenerateTiles()
 	TileGenerationParams.MinorNoiseOffset = MinorNoiseOffset;
 	TileGenerationParams.MinorNoiseScale = MinorNoiseScale;
 	TileGenerationParams.MinorNoiseStrength = MinorNoiseStrength;
+	return TileGenerationParams;
+}
 
-	for (int Row = int(CenterTileIndex.X) - DrawDistance; Row <= int(CenterTileIndex.X) + DrawDistance; ++Row) {
-		for (int Column = int(CenterTileIndex.Y) - DrawDistance; Column <= int(CenterTileIndex.Y) + DrawDistance; ++Column) {
+
+void ATileGenerator::GenerateTiles()
+{
+	DeleteAllTiles();
+	FTileGenerationParams TileGenerationParams = SetupTileGenerationParams();
+
+	for (int Row = CenterTileIndex.X - DrawDistance; Row <= CenterTileIndex.X + DrawDistance; ++Row) {
+		for (int Column = CenterTileIndex.Y - DrawDistance; Column <= CenterTileIndex.Y + DrawDistance; ++Column) {
 			FTileIndex CurrentTileIndex(Row, Column);
 			TileGenerationParams.TileIndex = CurrentTileIndex;
 			FVector TileLocation(CurrentTileIndex.X * TileSize, CurrentTileIndex.Y * TileSize, 0);
 			FActorSpawnParameters SpawnParams;
 			AProceduralTile* CurrentTile = GetWorld()->SpawnActor<AProceduralTile>(TileLocation, GetActorRotation(), SpawnParams);
-			CurrentTile->GenerateTile(TileGenerationParams, LandscapeMaterial);
+			CurrentTile->Setup(this, PlayerClass, LandscapeMaterial);
+			CurrentTile->GenerateTile(TileGenerationParams);
 			FString TileName = FString::Printf(TEXT("TILE %d,%d"), CurrentTileIndex.X, CurrentTileIndex.Y);
 			CurrentTile->SetActorLabel(TileName);
 			Tiles.Add(CurrentTileIndex, CurrentTile);
 		}
+	}
+}
+
+void ATileGenerator::UpdateTiles(FTileIndex NewCenterIndex)
+{
+	CenterTileIndex = NewCenterIndex;
+
+	TArray<FTileIndex> UpdateableTileIndices;
+	TArray<FTileIndex> IndicesToGenerate;
+	Tiles.GetKeys(UpdateableTileIndices);
+
+	for (int Row = CenterTileIndex.X - DrawDistance; Row <= CenterTileIndex.X + DrawDistance; ++Row) {
+		for (int Column = CenterTileIndex.Y - DrawDistance; Column <= CenterTileIndex.Y + DrawDistance; ++Column) {
+			FTileIndex CurrentTileIndex(Row, Column);
+			if (Tiles.Find(CurrentTileIndex)) {
+				UpdateableTileIndices.Remove(CurrentTileIndex);
+			}
+			else {
+				IndicesToGenerate.Add(CurrentTileIndex);
+			}
+		}
+	}
+
+	FTileGenerationParams TileGenerationParams = SetupTileGenerationParams();
+	for (FTileIndex IndexToGenerate : IndicesToGenerate) {
+		FTileIndex IndexToUpdate = UpdateableTileIndices[0];
+		UpdateableTileIndices.RemoveAt(0);
+		TileGenerationParams.TileIndex = IndexToGenerate;
+		AProceduralTile* TileToUpdate = *Tiles.Find(IndexToUpdate);
+		FVector TileLocation(IndexToGenerate.X * TileSize, IndexToGenerate.Y * TileSize, 0);
+		TileToUpdate->SetActorLocation(TileLocation);
+		TileToUpdate->GenerateTile(TileGenerationParams, true);
+		Tiles.Add(IndexToGenerate, TileToUpdate);
+		Tiles.Remove(IndexToUpdate);
 	}
 }
 
@@ -53,19 +106,5 @@ void ATileGenerator::DeleteAllTiles() {
 		Tile->Destroy();
 	}
 	Tiles.Empty();
-}
-
-// Called when the game starts or when spawned
-void ATileGenerator::BeginPlay()
-{
-	Super::BeginPlay();
-	
-}
-
-// Called every frame
-void ATileGenerator::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
 }
 

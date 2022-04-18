@@ -4,6 +4,10 @@
 #include "ProceduralTile.h"
 
 #include "ProceduralMeshComponent.h"
+#include "TileGenerator.h"
+
+#include "Components/BoxComponent.h"
+#include "GameFramework/Character.h"
 
 // Sets default values
 AProceduralTile::AProceduralTile()
@@ -13,44 +17,107 @@ AProceduralTile::AProceduralTile()
 	ProceduralMeshComponent = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("PorceduralMeshComponent"));
 	ProceduralMeshComponent->SetCollisionProfileName("BlockAll");
 	SetRootComponent(ProceduralMeshComponent);
+
+	BoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxComponent"));
+	BoxComponent->SetupAttachment(RootComponent);
 }
 
-void AProceduralTile::GenerateTile(FTileGenerationParams TileGenerationParams, UMaterialInterface* Material) {
+void AProceduralTile::Setup(ATileGenerator* Tilegenerator_In, TSubclassOf<ACharacter> PlayerClass_In, UMaterialInterface* Material)
+{	
+	TileGenerator = Tilegenerator_In;
+	PlayerClass = PlayerClass_In.Get();
+	if (ProceduralMeshComponent) ProceduralMeshComponent->SetMaterial(0, Material);
+	if(BoxComponent) BoxComponent->OnComponentBeginOverlap.AddDynamic(this, &AProceduralTile::OnBeginOverlap);
+}
+
+void AProceduralTile::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (OtherActor->IsA(PlayerClass.Get())) {
+		UE_LOG(LogTemp, Warning, TEXT("Overlap"));
+		if (TileGenerator)
+		{
+			TileGenerator->UpdateTiles(TileIndex);
+			UE_LOG(LogTemp, Warning, TEXT("TileGenerator"));
+		}
+		else UE_LOG(LogTemp, Warning, TEXT("No TileGenerator"));
+	}
+}
+
+void AProceduralTile::GenerateTile(FTileGenerationParams TileGenerationParams, bool bIsUpdate) {
 	TArray<FVector> Vertices;
 	TArray<int32> Triangles;
 	TArray<FVector> Normals;
 	TArray<FVector2D> UV0;
 	TArray<FLinearColor> VertexColor;
 
+	TileIndex = TileGenerationParams.TileIndex;
+	if (bIsUpdate) SetupParamsUpdate(TileGenerationParams, Vertices, Normals, UV0, VertexColor);
+	else SetupParamsCreation(TileGenerationParams, Vertices, Triangles, Normals, UV0, VertexColor);
+
+	if (ProceduralMeshComponent) {
+		if(bIsUpdate) ProceduralMeshComponent->UpdateMeshSection_LinearColor(0, Vertices, Normals, UV0, VertexColor, TArray<FProcMeshTangent>());
+		else ProceduralMeshComponent->CreateMeshSection_LinearColor(0, Vertices, Triangles, Normals, UV0, VertexColor, TArray<FProcMeshTangent>(), true);
+	}
+}
+
+void AProceduralTile::SetupParamsCreation(FTileGenerationParams TileGenerationParams, TArray<FVector>& Vertices, TArray<int32>& Triangles, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FLinearColor>& VertexColor) {
 	float StartOffset = float(TileGenerationParams.TileSize) / 2;
 	float DistanceBetweenVertices = float(TileGenerationParams.TileSize) / (TileGenerationParams.TileResolution - 1);
 
+	float MaxZOffset = 0;
+	float MinZOffset = 0;
+
 	for (int Row = 0; Row < TileGenerationParams.TileResolution; ++Row) {
 		for (int Column = 0; Column < TileGenerationParams.TileResolution; ++Column) {
-
-			float CurrentXOffset = StartOffset - DistanceBetweenVertices * Row;
-			float CurrentYOffset = StartOffset - DistanceBetweenVertices * Column;
-
-			float UPos = MapToUV(CurrentXOffset + TileGenerationParams.TileIndex.X * TileGenerationParams.TileSize, StartOffset, TileGenerationParams.TileSize);
-			float VPos = MapToUV(CurrentYOffset + TileGenerationParams.TileIndex.Y * TileGenerationParams.TileSize, StartOffset, TileGenerationParams.TileSize);
-
-			float MicroZOffset = GetZOffset(UPos, VPos, TileGenerationParams.MinorNoiseScale, TileGenerationParams.MinorNoiseOffset, TileGenerationParams.MinorNoiseStrength, StartOffset);
-			float LargeZOffset = GetZOffset(UPos, VPos, TileGenerationParams.MajorNoiseScale, TileGenerationParams.MajorNoiseOffset, TileGenerationParams.MajorNoiseStrength, StartOffset);
-			float CurrentZOffset = LargeZOffset + MicroZOffset;
-
-			FVector CurrentLocation(CurrentXOffset, CurrentYOffset, CurrentZOffset);
-			Vertices.Add(CurrentLocation);
-
+			GenerateVertexInformation(Vertices, Normals, UV0, VertexColor, MinZOffset, MaxZOffset, TileGenerationParams, Row, Column, StartOffset, DistanceBetweenVertices);
 			if (Row < TileGenerationParams.TileResolution - 1 && Column < TileGenerationParams.TileResolution - 1) {
 				GenerateTriangles(Triangles, Row, Column, TileGenerationParams.TileResolution);
 			}
-			Normals.Add(CalculateVertexNormal(CurrentXOffset + TileGenerationParams.TileIndex.X * TileGenerationParams.TileSize, CurrentYOffset + TileGenerationParams.TileIndex.Y * TileGenerationParams.TileSize, StartOffset, DistanceBetweenVertices, TileGenerationParams));
-			UV0.Add(FVector2D(UPos, VPos));
-			VertexColor.Add(FLinearColor(CurrentZOffset, 1 - CurrentZOffset, MicroZOffset));
 		}
 	}
-	ProceduralMeshComponent->CreateMeshSection_LinearColor(0, Vertices, Triangles, Normals, UV0, VertexColor, TArray<FProcMeshTangent>(), true);
-	ProceduralMeshComponent->SetMaterial(0, Material);
+	float ZBoxExtent = (MaxZOffset - MinZOffset) / 2 + 10;
+	float XYBoxExtent = TileGenerationParams.TileSize / 2 - 10;
+	if (BoxComponent) BoxComponent->SetBoxExtent(FVector(XYBoxExtent, XYBoxExtent, ZBoxExtent));
+}
+
+void AProceduralTile::SetupParamsUpdate(FTileGenerationParams TileGenerationParams, TArray<FVector>& Vertices, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FLinearColor>& VertexColor) {
+	float StartOffset = float(TileGenerationParams.TileSize) / 2;
+	float DistanceBetweenVertices = float(TileGenerationParams.TileSize) / (TileGenerationParams.TileResolution - 1);
+
+	float MaxZOffset = 0;
+	float MinZOffset = 0;
+
+	for (int Row = 0; Row < TileGenerationParams.TileResolution; ++Row) {
+		for (int Column = 0; Column < TileGenerationParams.TileResolution; ++Column) {
+			GenerateVertexInformation(Vertices, Normals, UV0, VertexColor, MinZOffset, MaxZOffset, TileGenerationParams, Row, Column, StartOffset, DistanceBetweenVertices);
+		}
+	}
+	float ZBoxExtent = (MaxZOffset - MinZOffset) / 2 + 10;
+	float XYBoxExtent = TileGenerationParams.TileSize / 2 - 10;
+	if (BoxComponent) BoxComponent->SetBoxExtent(FVector(XYBoxExtent, XYBoxExtent, ZBoxExtent));
+}
+
+void AProceduralTile::GenerateVertexInformation(TArray<FVector>& Vertices, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FLinearColor>& VertexColor, float& MinZOffset, float& MaxZOffset, FTileGenerationParams TileGenerationParams, int Row, int Column, float StartOffset, float DistanceBetweenVertices)
+{
+	float CurrentXOffset = StartOffset - DistanceBetweenVertices * Row;
+	float CurrentYOffset = StartOffset - DistanceBetweenVertices * Column;
+
+	float UPos = MapToUV(CurrentXOffset + TileGenerationParams.TileIndex.X * TileGenerationParams.TileSize, StartOffset, TileGenerationParams.TileSize);
+	float VPos = MapToUV(CurrentYOffset + TileGenerationParams.TileIndex.Y * TileGenerationParams.TileSize, StartOffset, TileGenerationParams.TileSize);
+
+	float MicroZOffset = GetZOffset(UPos, VPos, TileGenerationParams.MinorNoiseScale, TileGenerationParams.MinorNoiseOffset, TileGenerationParams.MinorNoiseStrength, StartOffset);
+	float LargeZOffset = GetZOffset(UPos, VPos, TileGenerationParams.MajorNoiseScale, TileGenerationParams.MajorNoiseOffset, TileGenerationParams.MajorNoiseStrength, StartOffset);
+	float CurrentZOffset = LargeZOffset + MicroZOffset;
+
+	if (CurrentZOffset < MinZOffset) MinZOffset = CurrentZOffset;
+	if (CurrentZOffset > MaxZOffset) MaxZOffset = CurrentZOffset;
+
+	FVector CurrentLocation(CurrentXOffset, CurrentYOffset, CurrentZOffset);
+	Vertices.Add(CurrentLocation);
+
+	Normals.Add(CalculateVertexNormal(CurrentXOffset + TileGenerationParams.TileIndex.X * TileGenerationParams.TileSize, CurrentYOffset + TileGenerationParams.TileIndex.Y * TileGenerationParams.TileSize, StartOffset, DistanceBetweenVertices, TileGenerationParams));
+	UV0.Add(FVector2D(UPos, VPos));
+	VertexColor.Add(FLinearColor(CurrentZOffset, 1 - CurrentZOffset, MicroZOffset));
 }
 
 

@@ -17,14 +17,11 @@ public:
 	// Sets default values for this actor's properties
 	ATileGenerator();
 
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<ACharacter> PlayerClass;
 
 	UPROPERTY(EditAnywhere, meta = (UIMin = 0))
 	int DrawDistance = 1;
-
-	UPROPERTY(EditAnywhere)
-	FVector2D CenterTileIndex;
 
 	UPROPERTY(EditAnywhere, meta = (UIMin = 1))
 	bool bReloadInEditor;//Should the mesh be updated in the editor if changes are made to it's properties?
@@ -59,6 +56,8 @@ public:
 	UFUNCTION(CallInEditor)
 	void GenerateTiles();
 
+	void UpdateTiles(FTileIndex NewCenterIndex);
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -67,7 +66,11 @@ protected:
 
 private:
 
+	FTileIndex CenterTileIndex;
+
 	TMap<FTileIndex, AProceduralTile*> Tiles;
 
 	void DeleteAllTiles();
+
+	FTileGenerationParams SetupTileGenerationParams();
 };
