@@ -3,6 +3,7 @@
 
 #include "TileGenerator.h"
 
+#include "../TreeGeneration/TreeGenerator.h"
 
 // Sets default values
 ATileGenerator::ATileGenerator()
@@ -61,8 +62,10 @@ void ATileGenerator::GenerateTiles()
 			FString TileName = FString::Printf(TEXT("TILE %d,%d"), CurrentTileIndex.X, CurrentTileIndex.Y);
 			CurrentTile->SetActorLabel(TileName);
 			Tiles.Add(CurrentTileIndex, CurrentTile);
+			if (TreeGenerator) TreeGenerator->GenerateTrees(CurrentTileIndex, TileSize);
 		}
 	}
+	
 }
 
 void ATileGenerator::UpdateTiles(FTileIndex NewCenterIndex)

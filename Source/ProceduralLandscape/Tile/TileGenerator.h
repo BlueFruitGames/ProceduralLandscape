@@ -53,9 +53,14 @@ public:
 	UPROPERTY(EditAnywhere)
 	UMaterialInterface* LandscapeMaterial;
 
+	UPROPERTY(EditAnywhere)
+	class ATreeGenerator* TreeGenerator;
+
+	//Generates new tiles for the specified drawing distance
 	UFUNCTION(CallInEditor)
 	void GenerateTiles();
 
+	//Is called to update the tiles of the landscape
 	void UpdateTiles(FTileIndex NewCenterIndex);
 
 protected:
@@ -70,7 +75,9 @@ private:
 
 	TMap<FTileIndex, AProceduralTile*> Tiles;
 
+	//Delets all tiles in Tiles map
 	void DeleteAllTiles();
 
+	//Sets up a TileGenerationParams instant
 	FTileGenerationParams SetupTileGenerationParams();
 };

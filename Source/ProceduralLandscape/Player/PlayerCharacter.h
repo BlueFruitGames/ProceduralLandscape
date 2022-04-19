@@ -31,8 +31,4 @@ private:
 	void Turn(float AxisValue);
 
 	void LookUp(float AxisValue);
-
-
-
-
 };

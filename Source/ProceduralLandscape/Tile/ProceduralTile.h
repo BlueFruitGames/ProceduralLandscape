@@ -90,7 +90,8 @@ public:
 
 	UFUNCTION()
 	void OnBeginOverlap (UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-
+	
+	//Sets up proberties which aren't changing at runtime
 	void Setup(class ATileGenerator* Tilegenerator_In, TSubclassOf<class ACharacter> PlayerClass_In, UMaterialInterface* Material);
 	
 	//Procedurally generates a tile using ProceduralMeshComponent
@@ -113,9 +114,10 @@ private:
 	//Generates the triangles vor the vertex at (CurrentRow, CurrentColumn)
 	void GenerateTriangles(TArray<int32>& Triangles, int CurrentRow, int CurrentColumn, int TileResolution);
 
-	//
+	//Sets up the Parameters for creating a new mesh
 	void SetupParamsCreation(FTileGenerationParams TileGenerationParams, TArray<FVector>& Vertices, TArray<int32>& Triangles, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FLinearColor>& VertexColor);
 	
+	//Sets up the Parameters for updating an existing mesh
 	void SetupParamsUpdate(FTileGenerationParams TileGenerationParams, TArray<FVector>& Vertices, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FLinearColor>& VertexColor);
 	
 	void GenerateVertexInformation(TArray<FVector>& Vertices, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FLinearColor>& VertexColor, float& MinZOffset, float& MaxZOffset, FTileGenerationParams TileGenerationParams, int Row, int Column, float StartOffset, float DistanceBetweenVertices);
