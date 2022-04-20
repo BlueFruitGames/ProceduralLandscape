@@ -5,6 +5,8 @@
 
 #include "../TreeGeneration/TreeGenerator.h"
 
+#include "Math/RandomStream.h"
+
 // Sets default values
 ATileGenerator::ATileGenerator()
 {
@@ -32,15 +34,27 @@ void ATileGenerator::BeginPlay()
 
 FTileGenerationParams ATileGenerator::SetupTileGenerationParams()
 {
+	FRandomStream RandomStream(RandomSeed);
 	FTileGenerationParams TileGenerationParams;
 	TileGenerationParams.TileSize = TileSize;
 	TileGenerationParams.TileResolution = TileResolution;
-	TileGenerationParams.MajorNoiseOffset = MajorNoiseOffset;
-	TileGenerationParams.MajorNoiseScale = MajorNoiseScale;
-	TileGenerationParams.MajorNoiseStrength = MajorNoiseStrength;
-	TileGenerationParams.MinorNoiseOffset = MinorNoiseOffset;
-	TileGenerationParams.MinorNoiseScale = MinorNoiseScale;
-	TileGenerationParams.MinorNoiseStrength = MinorNoiseStrength;
+
+	TileGenerationParams.MajorNoiseStrength = RandomStream.FRandRange(MajorNoiseStrength - MajorNoiseStrengthDeviation, MajorNoiseStrength + MajorNoiseStrengthDeviation);
+	float MajorNoiseOffsetX = RandomStream.FRandRange(MajorNoiseOffset.X - MajorNoiseOffsetDeviation, MajorNoiseOffset.X + MajorNoiseOffsetDeviation);
+	float MajorNoiseOffsetY = RandomStream.FRandRange(MajorNoiseOffset.Y - MajorNoiseOffsetDeviation, MajorNoiseOffset.Y + MajorNoiseOffsetDeviation);
+	TileGenerationParams.MinorNoiseOffset = FVector2D(MajorNoiseOffsetX, MajorNoiseOffsetY);
+	float MajorNoiseScaleX = RandomStream.FRandRange(MajorNoiseScale.X - MajorNoiseScaleDeviation, MajorNoiseScale.X + MajorNoiseScaleDeviation);
+	float MajorNoiseScaleY = RandomStream.FRandRange(MajorNoiseScale.Y - MajorNoiseScaleDeviation, MajorNoiseScale.Y + MajorNoiseScaleDeviation);
+	TileGenerationParams.MajorNoiseScale = FVector2D(MajorNoiseScaleX, MajorNoiseScaleY);
+
+	TileGenerationParams.MinorNoiseStrength = RandomStream.FRandRange(MinorNoiseStrength - MinorNoiseStrengthDeviation, MinorNoiseStrength + MinorNoiseStrengthDeviation);
+	float MinorNoiseOffsetX = RandomStream.FRandRange(MinorNoiseOffset.X - MinorNoiseOffsetDeviation, MinorNoiseOffset.X + MinorNoiseOffsetDeviation);
+	float MinorNoiseOffsetY = RandomStream.FRandRange(MinorNoiseOffset.Y - MinorNoiseOffsetDeviation, MinorNoiseOffset.Y + MinorNoiseOffsetDeviation);
+	TileGenerationParams.MinorNoiseOffset = FVector2D(MinorNoiseOffsetX, MinorNoiseOffsetY);
+	float MinorNoiseScaleX = RandomStream.FRandRange(MinorNoiseScale.X - MinorNoiseScaleDeviation, MinorNoiseScale.X + MinorNoiseScaleDeviation);
+	float MinorNoiseScaleY = RandomStream.FRandRange(MinorNoiseScale.Y - MinorNoiseScaleDeviation, MinorNoiseScale.Y + MinorNoiseScaleDeviation);
+	TileGenerationParams.MinorNoiseScale = FVector2D(MinorNoiseScaleX, MinorNoiseScaleY);
+
 	return TileGenerationParams;
 }
 
@@ -62,7 +76,7 @@ void ATileGenerator::GenerateTiles()
 			FString TileName = FString::Printf(TEXT("TILE %d,%d"), CurrentTileIndex.X, CurrentTileIndex.Y);
 			CurrentTile->SetActorLabel(TileName);
 			Tiles.Add(CurrentTileIndex, CurrentTile);
-			if (TreeGenerator) TreeGenerator->GenerateTrees(CurrentTileIndex, TileSize);
+			if (TreeGenerator && bGenerateTrees) TreeGenerator->GenerateTrees(CurrentTileIndex, TileSize, RandomSeed);
 		}
 	}
 	

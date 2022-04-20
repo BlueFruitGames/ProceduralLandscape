@@ -22,7 +22,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	//Generates random tree locations
-	void GenerateTrees(FTileIndex TileIndex, int TileSize);
+	void GenerateTrees(FTileIndex TileIndex, int TileSize, int RandomSeed);
 
 	UPROPERTY(EditAnywhere, meta = (UIMin = 1, UIMax = 100))
 	int SpawnCount = 0;//Number of trees per tile

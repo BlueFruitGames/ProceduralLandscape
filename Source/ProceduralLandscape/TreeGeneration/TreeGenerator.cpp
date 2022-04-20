@@ -28,14 +28,14 @@ void ATreeGenerator::Tick(float DeltaTime)
 
 }
 
-void ATreeGenerator::GenerateTrees(FTileIndex TileIndex, int TileSize)
+void ATreeGenerator::GenerateTrees(FTileIndex TileIndex, int TileSize, int RandomSeed)
 {
 	float XMin = TileIndex.X * TileSize - TileSize / 2 + TreeRadius;
 	float XMax = TileIndex.X * TileSize + TileSize / 2 - TreeRadius;
 	float YMin = TileIndex.Y * TileSize - TileSize / 2 + TreeRadius;
 	float YMax = TileIndex.Y * TileSize + TileSize / 2 - TreeRadius;
 
-	FRandomStream RandomStream(TileIndex.X*10000 + TileIndex.Y);
+	FRandomStream RandomStream((TileIndex.X*10000 + TileIndex.Y) * RandomSeed);
 	TArray<FVector> GeneratedLocations;
 	int Count = 0;
 	int Tries = 0;
