@@ -24,11 +24,31 @@ protected:
 
 private:
 
+	/**
+	 * Moves thr character forward.
+	 * 
+	 * \param AxisValue current input on this input axis
+	 */
 	void MoveForward(float AxisValue);
 
+	/**
+	 * Moves the charcter to its right.
+	 * 
+	 * \param AxisValue current input on this input axis
+	 */
 	void MoveRight(float AxisValue);
 
+	/**
+	 * Turns a character around its Z-axis.
+	 * 
+	 * \param AxisValue current input on this input axis
+	 */
 	void Turn(float AxisValue);
 
+	/**
+	 * Turns a character around its Y-axis..
+	 * 
+	 * \param AxisValue current input on this input axis
+	 */
 	void LookUp(float AxisValue);
 };

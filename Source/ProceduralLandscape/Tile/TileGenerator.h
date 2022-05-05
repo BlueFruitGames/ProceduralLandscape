@@ -17,8 +17,8 @@ public:
 	// Sets default values for this actor's properties
 	ATileGenerator();
 
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<ACharacter> PlayerClass;
+	UPROPERTY(EditAnywhere, Category = "General")
+	TSubclassOf<ACharacter> PlayerClass; //The class which is used for the player character
 
 	UPROPERTY(EditAnywhere, Category="General")
 	int RandomSeed = 1;//The global RandomSeed for every landscape operation which involes random number generation
@@ -77,14 +77,30 @@ public:
 	UPROPERTY(EditAnywhere, Category = "General")
 	UMaterialInterface* LandscapeMaterial; //Material that will be applied to every tile
 
-	UPROPERTY(EditAnywhere, Category = "General")
-	class ATreeGenerator* TreeGenerator; //The current instance of the ATreeGenerator in the scene
+	UPROPERTY(EditAnywhere, meta = (UIMin = 1, UIMax = 100), Category = "TreeGeneration")
+	int SpawnCount = 0;//Number of trees per tile
 
-	//Generates new tiles for the specified drawing distance
+	UPROPERTY(EditAnywhere, Category = "TreeGeneration")
+	float TreeRadius = 5;//Area around a tree where other trees can't spawn
+
+	UPROPERTY(EditAnywhere, Category = "TreeGeneration")
+	int MaxTries = 100; //Maximum number of tries to generate a new location
+
+	UPROPERTY(EditAnywhere, Category = "TreeGeneration")
+	TArray<UStaticMesh*> TreeMeshes; //All tree meshes for the current instance
+
+	/**
+	 * Initializes tiles for the specified drawing distance
+	 *
+	 */
 	UFUNCTION(CallInEditor)
 	void GenerateTiles();
 
-	//Is called to update the tiles of the landscape
+	/**
+	 * Is called to update the tiles of the landscape
+	 * 
+	 * \param NewCenterIndex is the index of the tile that will be used as the new center
+	 */
 	void UpdateTiles(FTileIndex NewCenterIndex);
 
 protected:
@@ -95,13 +111,21 @@ protected:
 
 private:
 
+	UPROPERTY(EditAnywhere)
 	FTileIndex CenterTileIndex;
 
-	TMap<FTileIndex, AProceduralTile*> Tiles;
+	TMap<FTileIndex, AProceduralTile*> Tiles; //A tiles that currently exist
 
-	//Delets all tiles in Tiles map
+	/**
+	 * .
+	 * Delets all tiles in the Tiles-Map
+	 */
 	void DeleteAllTiles();
 
-	//Sets up a TileGenerationParams instant
+	/**
+	 * Sets up the parameters needed for the tile generation.
+	 * 
+	 * \return the parameters that will be used for the tile generation
+	 */
 	FTileGenerationParams SetupTileGenerationParams();
 };

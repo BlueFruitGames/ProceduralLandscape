@@ -3,22 +3,19 @@
 
 #include "TileGenerator.h"
 
-#include "../TreeGeneration/TreeGenerator.h"
+#include "TreeGenerationComponent.h"
 
 #include "Math/RandomStream.h"
 
 // Sets default values
 ATileGenerator::ATileGenerator()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
-
 }
 
 void ATileGenerator::OnConstruction(const FTransform& Transform) {
 	if (bReloadInEditor) {
-		CenterTileIndex.X = 0;
-		CenterTileIndex.Y = 0;
+		//CenterTileIndex.X = 0;
+		//CenterTileIndex.Y = 0;
 		GenerateTiles();
 	}
 }
@@ -75,8 +72,11 @@ void ATileGenerator::GenerateTiles()
 			CurrentTile->GenerateTile(TileGenerationParams);
 			FString TileName = FString::Printf(TEXT("TILE %d,%d"), CurrentTileIndex.X, CurrentTileIndex.Y);
 			CurrentTile->SetActorLabel(TileName);
+			if (bGenerateTrees) {
+				CurrentTile->GetTreeGenerationComponent()->SetupTreeGeneration(SpawnCount, TreeRadius, MaxTries, TreeMeshes);
+				CurrentTile->GetTreeGenerationComponent()->GenerateTrees(CurrentTileIndex, TileSize, CurrentTile->GetMaxZPosition(), CurrentTile->GetMinZPosition(), RandomSeed);
+			}
 			Tiles.Add(CurrentTileIndex, CurrentTile);
-			if (TreeGenerator && bGenerateTrees) TreeGenerator->GenerateTrees(CurrentTileIndex, TileSize, RandomSeed);
 		}
 	}
 	
@@ -85,7 +85,6 @@ void ATileGenerator::GenerateTiles()
 void ATileGenerator::UpdateTiles(FTileIndex NewCenterIndex)
 {
 	CenterTileIndex = NewCenterIndex;
-
 	TArray<FTileIndex> UpdateableTileIndices;
 	TArray<FTileIndex> IndicesToGenerate;
 	Tiles.GetKeys(UpdateableTileIndices);
@@ -113,6 +112,10 @@ void ATileGenerator::UpdateTiles(FTileIndex NewCenterIndex)
 		TileToUpdate->GenerateTile(TileGenerationParams, true);
 		Tiles.Add(IndexToGenerate, TileToUpdate);
 		Tiles.Remove(IndexToUpdate);
+		if (bGenerateTrees) {
+			TileToUpdate->GetTreeGenerationComponent()->ClearTrees();
+			TileToUpdate->GetTreeGenerationComponent()->GenerateTrees(IndexToGenerate, TileSize, TileToUpdate->GetMaxZPosition(), TileToUpdate->GetMinZPosition(), RandomSeed);
+		}
 	}
 }
 
