@@ -23,7 +23,7 @@ void UTreeGenerationComponent::SetupTreeGeneration(int SpawnCount_In, float Tree
 	TreeMeshes = TreeMeshes_In;
 	for (UStaticMesh* TreeMesh : TreeMeshes) {
 		if (!TreeMesh) continue;
-		FString CurrentComponentName = FString::Printf(TEXT("ISMComponent_%s"), *TreeMesh->GetName());
+		FString CurrentComponentName = FString::Printf(TEXT("HISMComponent_%s"), *TreeMesh->GetName());
 		UHierarchicalInstancedStaticMeshComponent* CurrentHISMComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(this, UHierarchicalInstancedStaticMeshComponent::StaticClass(), FName(CurrentComponentName));
 		CurrentHISMComponent->SetWorldLocation(FVector(0, 0, 0));
 		CurrentHISMComponent->AttachToComponent(this, FAttachmentTransformRules::KeepWorldTransform);
