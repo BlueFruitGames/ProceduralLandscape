@@ -9,6 +9,13 @@
 
 #include "TreeGenerationComponent.generated.h"
 
+struct FTileBounds {
+	float XMin;
+	float XMax;
+	float YMin;
+	float YMax;
+};
+
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class PROCEDURALLANDSCAPE_API UTreeGenerationComponent : public USceneComponent
@@ -27,7 +34,7 @@ public:
 	 * \param MaxTries_In The max number of tries to generate a new tree location
 	 * \param TreeMeshes_In The meshes for the trees
 	 */
-	void SetupTreeGeneration(int SpawnCount_In, float TreeRadius_In, int MaxTries_In, TArray<UStaticMesh*> TreeMeshes_In);
+	void SetupTreeGeneration(int SpawnCount_In, int MaxTries_In, TArray<class UFoliageDataAsset*> TreeData_In);
 
 	/**
 	 * Generates randomly placed trees
@@ -38,7 +45,7 @@ public:
 	 * \param TraceZEnd the z value where the line trace  to find the ground should start
 	 * \param RandomSeed the random seed of the current game
 	 */
-	void GenerateTrees(FTileIndex TileIndex, int TileSize, float TraceZStart, float TraceZEnd, int RandomSeed);
+	void GenerateTrees(FTileIndex TileIndex, int TileSize, float TraceZStart, float TraceZEnd, int RandomSeed, bool bDrawDebug = false);
 
 	/**
 	 * Removes all trees in all HISMComponents.
@@ -54,7 +61,7 @@ private:
 	 * \param GeneratedLocations The already existing locations
 	 * \return true if the locations is inside the Radius of an existing tree, false otherwise
 	 */
-	bool DoesOverlap(FVector NewLocation, TArray<FVector> GeneratedLocations);
+	bool DoesOverlap(FVector NewLocation, TArray<FVector> GeneratedLocations, float TreeRadius);
 
 	UPROPERTY()
 	TArray<class UHierarchicalInstancedStaticMeshComponent*> HISMComponents; //All HISM Components of this TreeGenerationComponent
@@ -63,12 +70,9 @@ private:
 	int SpawnCount;//Number of trees per tile
 
 	UPROPERTY()
-	float TreeRadius;//Area around a tree where other trees can't spawn
-
-	UPROPERTY()
 	int MaxTries; //Maximum number of tries to generate a new location
 
 	UPROPERTY()
-	TArray<UStaticMesh*> TreeMeshes; //All tree meshes which are currently used
+	TArray<UFoliageDataAsset*> TreeData; //All tree meshes which are currently used
 
 };

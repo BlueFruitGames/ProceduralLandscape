@@ -73,8 +73,8 @@ void ATileGenerator::GenerateTiles()
 			FString TileName = FString::Printf(TEXT("TILE %d,%d"), CurrentTileIndex.X, CurrentTileIndex.Y);
 			CurrentTile->SetActorLabel(TileName);
 			if (bGenerateTrees) {
-				CurrentTile->GetTreeGenerationComponent()->SetupTreeGeneration(SpawnCount, TreeRadius, MaxTries, TreeMeshes);
-				CurrentTile->GetTreeGenerationComponent()->GenerateTrees(CurrentTileIndex, TileSize, CurrentTile->GetMaxZPosition(), CurrentTile->GetMinZPosition(), RandomSeed);
+				CurrentTile->GetTreeGenerationComponent()->SetupTreeGeneration(SpawnCount, MaxTries, TreeData);
+				CurrentTile->GetTreeGenerationComponent()->GenerateTrees(CurrentTileIndex, TileSize, CurrentTile->GetMaxZPosition(), CurrentTile->GetMinZPosition(), RandomSeed, bDrawTreeDebug);
 			}
 			Tiles.Add(CurrentTileIndex, CurrentTile);
 		}
@@ -114,7 +114,7 @@ void ATileGenerator::UpdateTiles(FTileIndex NewCenterIndex)
 		Tiles.Remove(IndexToUpdate);
 		if (bGenerateTrees) {
 			TileToUpdate->GetTreeGenerationComponent()->ClearTrees();
-			TileToUpdate->GetTreeGenerationComponent()->GenerateTrees(IndexToGenerate, TileSize, TileToUpdate->GetMaxZPosition(), TileToUpdate->GetMinZPosition(), RandomSeed);
+			TileToUpdate->GetTreeGenerationComponent()->GenerateTrees(IndexToGenerate, TileSize, TileToUpdate->GetMaxZPosition(), TileToUpdate->GetMinZPosition(), RandomSeed, bDrawTreeDebug);
 		}
 	}
 }

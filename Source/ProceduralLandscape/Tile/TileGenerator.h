@@ -81,13 +81,13 @@ public:
 	int SpawnCount = 0;//Number of trees per tile
 
 	UPROPERTY(EditAnywhere, Category = "TreeGeneration")
-	float TreeRadius = 5;//Area around a tree where other trees can't spawn
-
-	UPROPERTY(EditAnywhere, Category = "TreeGeneration")
 	int MaxTries = 100; //Maximum number of tries to generate a new location
 
 	UPROPERTY(EditAnywhere, Category = "TreeGeneration")
-	TArray<UStaticMesh*> TreeMeshes; //All tree meshes for the current instance
+	TArray<class UFoliageDataAsset*> TreeData; //Trees and their respective data for generation
+
+	UPROPERTY(EditAnywhere, Category = "TreeGeneration")
+	bool bDrawTreeDebug = false;//Number of trees per tile
 
 	/**
 	 * Initializes tiles for the specified drawing distance
