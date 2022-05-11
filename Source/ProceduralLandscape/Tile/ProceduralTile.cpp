@@ -5,8 +5,7 @@
 
 #include "ProceduralMeshComponent.h"
 #include "TileGenerator.h"
-#include "TreeGenerationComponent.h"
-#include "GrassGenerationComponent.h"
+#include "Foliage/FoliageGenerationComponent.h"
 
 #include "Components/BoxComponent.h"
 #include "GameFramework/Character.h"
@@ -24,10 +23,10 @@ AProceduralTile::AProceduralTile()
 	BoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxComponent"));
 	BoxComponent->SetupAttachment(RootComponent);
 
-	TreeGenerationComponent = CreateDefaultSubobject<UTreeGenerationComponent>(TEXT("TreeGenerationComponent"));
+	TreeGenerationComponent = CreateDefaultSubobject<UFoliageGenerationComponent>(TEXT("TreeGenerationComponent"));
 	TreeGenerationComponent->SetupAttachment(RootComponent);
 
-	GrassGenerationComponent = CreateDefaultSubobject<UGrassGenerationComponent>(TEXT("GrassGenerationComponent"));
+	GrassGenerationComponent = CreateDefaultSubobject<UFoliageGenerationComponent>(TEXT("GrassGenerationComponent"));
 	GrassGenerationComponent->SetupAttachment(RootComponent);
 }
 

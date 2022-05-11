@@ -21,4 +21,10 @@ public:
 	UPROPERTY(EditAnywhere)
 	float Radius;
 
+	UPROPERTY(EditAnywhere)
+	float Scale = 1;
+
+	UPROPERTY(EditAnywhere)
+	float ScaleRandomDiviation;
+
 };

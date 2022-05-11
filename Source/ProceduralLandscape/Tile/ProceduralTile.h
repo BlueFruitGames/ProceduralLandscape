@@ -97,11 +97,11 @@ public:
 	//Procedurally generates a tile using ProceduralMeshComponent
 	void GenerateTile(FTileGenerationParams TileGenerationParams, bool bIsUpdate = false);
 
-	class UTreeGenerationComponent* GetTreeGenerationComponent() {
+	class UFoliageGenerationComponent* GetTreeGenerationComponent() {
 		return TreeGenerationComponent;
 	}
 
-	class UGrassGenerationComponent* GetGrassGenerationComponent() {
+	class UFoliageGenerationComponent* GetGrassGenerationComponent() {
 		return GrassGenerationComponent;
 	}
 
@@ -121,10 +121,10 @@ private:
 	class UBoxComponent* BoxComponent; //trigger to detect relocation of the player
 
 	UPROPERTY(VisibleAnywhere)
-	class UTreeGenerationComponent* TreeGenerationComponent; //component for generating trees
+	class UFoliageGenerationComponent* TreeGenerationComponent; //component for generating trees
 
 	UPROPERTY(VisibleAnywhere)
-	class UGrassGenerationComponent* GrassGenerationComponent; //component for generating trees
+	class UFoliageGenerationComponent* GrassGenerationComponent; //component for generating trees
 
 	UPROPERTY()
 	TSubclassOf<class ACharacter> PlayerClass; //Class that is used to activate the trigger
