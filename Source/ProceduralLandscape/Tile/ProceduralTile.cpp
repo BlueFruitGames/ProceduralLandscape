@@ -6,15 +6,19 @@
 #include "ProceduralMeshComponent.h"
 #include "TileGenerator.h"
 #include "TreeGenerationComponent.h"
+#include "GrassGenerationComponent.h"
 
 #include "Components/BoxComponent.h"
 #include "GameFramework/Character.h"
+
+#define COLLISION_GROUND ECC_GameTraceChannel1
 
 // Sets default values
 AProceduralTile::AProceduralTile()
 {
 	ProceduralMeshComponent = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("PorceduralMeshComponent"));
 	ProceduralMeshComponent->SetCollisionProfileName("BlockAll");
+	ProceduralMeshComponent->SetCollisionResponseToChannel(COLLISION_GROUND, ECollisionResponse::ECR_Block);
 	SetRootComponent(ProceduralMeshComponent);
 
 	BoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxComponent"));
@@ -22,6 +26,9 @@ AProceduralTile::AProceduralTile()
 
 	TreeGenerationComponent = CreateDefaultSubobject<UTreeGenerationComponent>(TEXT("TreeGenerationComponent"));
 	TreeGenerationComponent->SetupAttachment(RootComponent);
+
+	GrassGenerationComponent = CreateDefaultSubobject<UGrassGenerationComponent>(TEXT("GrassGenerationComponent"));
+	GrassGenerationComponent->SetupAttachment(RootComponent);
 }
 
 void AProceduralTile::Setup(ATileGenerator* Tilegenerator_In, TSubclassOf<ACharacter> PlayerClass_In, UMaterialInterface* Material)

@@ -30,7 +30,10 @@ public:
 	bool bReloadInEditor;//Should the mesh be updated in the editor if changes are made to it's properties?
 
 	UPROPERTY(EditAnywhere, Category = "General")
-	bool bGenerateTrees = true;//If trees should also be generated
+	bool bGenerateTrees = false;//If trees should also be generated
+
+	UPROPERTY(EditAnywhere, Category = "General")
+	bool bGenerateGrass = false;//If grass should also be generated
 
 	UPROPERTY(EditAnywhere, Category = "General", meta = (UIMin = 1))
 	int TileSize; //Width of the tile
@@ -78,16 +81,25 @@ public:
 	UMaterialInterface* LandscapeMaterial; //Material that will be applied to every tile
 
 	UPROPERTY(EditAnywhere, meta = (UIMin = 1, UIMax = 100), Category = "TreeGeneration")
-	int SpawnCount = 0;//Number of trees per tile
+	int TreeSpawnCount = 0;//Number of trees per tile
 
 	UPROPERTY(EditAnywhere, Category = "TreeGeneration")
-	int MaxTries = 100; //Maximum number of tries to generate a new location
+	int TreeMaxTries = 100; //Maximum number of tries to generate a new location
 
 	UPROPERTY(EditAnywhere, Category = "TreeGeneration")
 	TArray<class UFoliageDataAsset*> TreeData; //Trees and their respective data for generation
 
 	UPROPERTY(EditAnywhere, Category = "TreeGeneration")
 	bool bDrawTreeDebug = false;//Number of trees per tile
+
+	UPROPERTY(EditAnywhere, meta = (UIMin = 1, UIMax = 100), Category = "GrassGeneration")
+	int GrassSpawnCount = 0;//Number of Grass per tile
+
+	UPROPERTY(EditAnywhere, Category = "GrassGeneration")
+	int GrassMaxTries = 100; //Maximum number of tries to generate a new location
+
+	UPROPERTY(EditAnywhere, Category = "GrassGeneration")
+	TArray<class UFoliageDataAsset*> GrassData; //Grass types and their respective data for generation
 
 	/**
 	 * Initializes tiles for the specified drawing distance
@@ -115,6 +127,8 @@ private:
 	FTileIndex CenterTileIndex;
 
 	TMap<FTileIndex, AProceduralTile*> Tiles; //A tiles that currently exist
+
+	FTileGenerationParams TileGenerationParams;
 
 	/**
 	 * .

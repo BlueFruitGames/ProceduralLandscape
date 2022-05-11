@@ -16,6 +16,12 @@ struct FTileBounds {
 	float YMax;
 };
 
+struct FGeneratedTreeInfo {
+	FVector Location;
+	float Radius;
+};
+
+
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class PROCEDURALLANDSCAPE_API UTreeGenerationComponent : public USceneComponent
@@ -45,7 +51,7 @@ public:
 	 * \param TraceZEnd the z value where the line trace  to find the ground should start
 	 * \param RandomSeed the random seed of the current game
 	 */
-	void GenerateTrees(FTileIndex TileIndex, int TileSize, float TraceZStart, float TraceZEnd, int RandomSeed, bool bDrawDebug = false);
+	TArray<FGeneratedTreeInfo> GenerateTrees(FTileIndex TileIndex, int TileSize, float TraceZStart, float TraceZEnd, int RandomSeed, bool bDrawDebug = false);
 
 	/**
 	 * Removes all trees in all HISMComponents.
