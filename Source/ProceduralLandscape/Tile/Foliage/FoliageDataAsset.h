@@ -19,6 +19,12 @@ public:
 	UStaticMesh* FoliageMesh;
 
 	UPROPERTY(EditAnywhere)
+	UCurveFloat* GrowthCurve;
+
+	UPROPERTY(EditAnywhere)
+	bool bIsTree;
+
+	UPROPERTY(EditAnywhere)
 	float Radius;
 
 	UPROPERTY(EditAnywhere)

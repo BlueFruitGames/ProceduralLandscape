@@ -15,7 +15,9 @@ struct FTileBounds {
 
 struct FGeneratedFoliageInfo {
 	FVector Location;
+	UCurveFloat* GrowthCurve;
 	float Radius;
+	bool bIsTree;
 };
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -35,7 +37,7 @@ public:
 	 * \param MaxTries_In The max number of tries to generate a new location
 	 * \param TreeMeshes_In The meshes for the foliage
 	 */
-	void SetupFoliageGeneration(int SpawnCount_In, int MaxTries_In, TArray<class UFoliageDataAsset*> FoliageData_In, bool bCollisionEnabled);
+	void SetupFoliageGeneration(int SpawnCount_In, int MaxTries_In, int BatchSize_In, bool bSpawnDirect_In, TArray<class UFoliageDataAsset*> FoliageData_In, int RandomSeed_In, bool bCollisionEnabled);
 
 	/**
 	 * Generates randomly placed foliage
@@ -46,7 +48,7 @@ public:
 	 * \param TraceZEnd the z value where the line trace  to find the ground should start
 	 * \param RandomSeed the random seed of the current game
 	 */
-	void GenerateFoliage(bool bSpawnOutside, struct FTileIndex TileIndex, int TileSize, float TraceZStart, float TraceZEnd, int RandomSeed, TArray<FGeneratedFoliageInfo>& ExistingFoliageInfos, int SpawnBatchSize,  bool bSpawnDirect, bool bDrawDebug = false);
+	void GenerateFoliage(struct FTileIndex TileIndex, int TileSize, float TraceZStart, float TraceZEnd, TArray<FGeneratedFoliageInfo>& ExistingFoliageInfos,  bool bDrawDebug = false);
 
 	bool SpawnSingleBatch();
 
@@ -66,7 +68,15 @@ private:
 	 * \param GeneratedLocations The already existing locations
 	 * \return true if the locations is inside the Radius of an existing tree, false otherwise
 	 */
-	virtual bool DoesOverlap(FVector NewLocation, TArray<FGeneratedFoliageInfo>& FoliageInfos, float CurrentFoliageRadius);
+	virtual bool DoesOverlap(FVector NewLocation, TArray<FGeneratedFoliageInfo> FoliageInfos, float CurrentFoliageRadius, float& Distance, float& ClosestRadius, UCurveFloat*& GrowthCurve);
+
+	TArray<FTileBounds> InitializeBounds(struct FTileIndex TileIndex, int TileSize);
+
+	TMap<UHierarchicalInstancedStaticMeshComponent*, TArray<FTransformArrayA2>> InitializeEmptyBatch();
+
+	void AddToBatch(TMap<UHierarchicalInstancedStaticMeshComponent*, TArray<FTransformArrayA2>>& Batches, UHierarchicalInstancedStaticMeshComponent* HISMComponent, FTransform Transform);
+
+	void GenerateRandomInstance(TArray<FTileBounds> TileBounds, FRandomStream& RandomStream, float TraceZStart, float TraceZEnd, int& HISMComponentIndex, FVector& Location);
 
 	UPROPERTY()
 	TArray<class UHierarchicalInstancedStaticMeshComponent*> HISMComponents; //All HISM Components of this TreeGenerationComponent
@@ -78,6 +88,15 @@ private:
 
 	UPROPERTY()
 	int MaxTries; //Maximum number of tries to generate a new location
+
+	UPROPERTY()
+	int BatchSize;
+
+	UPROPERTY()
+	int RandomSeed;
+
+	UPROPERTY()
+	bool bSpawnDirect;
 
 	UPROPERTY()
 	TArray<UFoliageDataAsset*> FoliageData; //All foliage meshes which are currently used
