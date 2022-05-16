@@ -153,22 +153,18 @@ void ATileGenerator::UpdateTiles(FTileIndex NewCenterIndex)
 
 		TArray<FGeneratedFoliageInfo> GeneratedFoliageInfos;
 		if (bGenerateTrees) {
-			TileToUpdate->GetTreeGenerationComponent()->ClearFoliage();
 			TileToUpdate->GetTreeGenerationComponent()->GenerateFoliage(IndexToGenerate, TileSize, TileToUpdate->GetMaxZPosition(), TileToUpdate->GetMinZPosition(), GeneratedFoliageInfos, bDrawTreeDebug);
 		}
 
 		if (bGenerateBranches) {
-			TileToUpdate->GetBranchGenerationComponent()->ClearFoliage();
 			TileToUpdate->GetBranchGenerationComponent()->GenerateFoliage(IndexToGenerate, TileSize, TileToUpdate->GetMaxZPosition(), TileToUpdate->GetMinZPosition(), GeneratedFoliageInfos);
 		}
 
 		if (bGenerateBushes) {
-			TileToUpdate->GetBushGenerationComponent()->ClearFoliage();
 			TileToUpdate->GetBushGenerationComponent()->GenerateFoliage(IndexToGenerate, TileSize, TileToUpdate->GetMaxZPosition(), TileToUpdate->GetMinZPosition(), GeneratedFoliageInfos);
 		}
 
 		if (bGenerateGrass) {
-			TileToUpdate->GetGrassGenerationComponent()->ClearFoliage();
 			TileToUpdate->GetGrassGenerationComponent()->GenerateFoliage(IndexToGenerate, TileSize, TileToUpdate->GetMaxZPosition(), TileToUpdate->GetMinZPosition(), GeneratedFoliageInfos);
 		}
 	}

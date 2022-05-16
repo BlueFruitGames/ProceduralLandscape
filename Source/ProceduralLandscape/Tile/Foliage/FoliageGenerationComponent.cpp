@@ -50,7 +50,12 @@ void UFoliageGenerationComponent::GenerateFoliage(FTileIndex TileIndex, int Tile
 	int Count = 0;
 	int Tries = 0;
 
-	TMap<UHierarchicalInstancedStaticMeshComponent*, TArray<FTransformArrayA2>> NewInstanceBatchesPerComponent = InitializeEmptyBatch();
+	TArray<int> CurrentIndices;
+	for (UHierarchicalInstancedStaticMeshComponent* HISMComponent : HISMComponents) {
+		CurrentIndices.Add(0);
+	}
+
+	//TMap<UHierarchicalInstancedStaticMeshComponent*, TArray<FTransformArrayA2>> NewInstanceBatchesPerComponent = InitializeEmptyBatch();
 
 	while (Count < SpawnCount && Tries < MaxTries) {
 		int HISMComponentIndex;
@@ -90,9 +95,16 @@ void UFoliageGenerationComponent::GenerateFoliage(FTileIndex TileIndex, int Tile
 			
 			if (bSpawnDirect) {
 				HISMComponents[HISMComponentIndex]->AddInstance(Transform, true);
+				if (CurrentIndices[HISMComponentIndex] < HISMComponents[HISMComponentIndex]->GetInstanceCount()) {
+					//HISMComponents[HISMComponentIndex]->UpdateInstanceTransform(CurrentIndices[HISMComponentIndex], Transform, true);
+				}
+				else {
+					HISMComponents[HISMComponentIndex]->AddInstance(Transform, true);
+				}
+				CurrentIndices[HISMComponentIndex] += 1;
 			}
 			else {
-				AddToBatch(NewInstanceBatchesPerComponent, HISMComponents[HISMComponentIndex], Transform);
+				//AddToBatch(NewInstanceBatchesPerComponent, HISMComponents[HISMComponentIndex], Transform);
 			}
 
 			Tries = 0;
@@ -100,7 +112,15 @@ void UFoliageGenerationComponent::GenerateFoliage(FTileIndex TileIndex, int Tile
 		}
 	}
 
-	InstanceBatchesPerComponent = NewInstanceBatchesPerComponent;
+	for (int i = 0; i < HISMComponents.Num(); ++i) {
+		UHierarchicalInstancedStaticMeshComponent* HISMComponent = HISMComponents[i];
+		int CurrentIndex = CurrentIndices[i];
+		while (CurrentIndex < HISMComponent->GetInstanceCount()) {
+			//HISMComponent->RemoveInstance(CurrentIndex);
+		}
+	}
+
+	//InstanceBatchesPerComponent = NewInstanceBatchesPerComponent;
 
 	return;
 }
