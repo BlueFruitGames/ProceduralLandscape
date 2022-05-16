@@ -28,6 +28,13 @@ AProceduralTile::AProceduralTile()
 
 	GrassGenerationComponent = CreateDefaultSubobject<UFoliageGenerationComponent>(TEXT("GrassGenerationComponent"));
 	GrassGenerationComponent->SetupAttachment(RootComponent);
+
+	BushGenerationComponent = CreateDefaultSubobject<UFoliageGenerationComponent>(TEXT("BushGenerationComponent"));
+	BushGenerationComponent->SetupAttachment(RootComponent);
+
+	BranchGenerationComponent = CreateDefaultSubobject<UFoliageGenerationComponent>(TEXT("BranchGenerationComponent"));
+	BranchGenerationComponent->SetupAttachment(RootComponent);
+
 }
 
 void AProceduralTile::Setup(ATileGenerator* Tilegenerator_In, TSubclassOf<ACharacter> PlayerClass_In, UMaterialInterface* Material)

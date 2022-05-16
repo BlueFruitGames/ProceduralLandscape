@@ -105,6 +105,14 @@ public:
 		return GrassGenerationComponent;
 	}
 
+	class UFoliageGenerationComponent* GetBushGenerationComponent() {
+		return BushGenerationComponent;
+	}
+
+	class UFoliageGenerationComponent* GetBranchGenerationComponent() {
+		return BranchGenerationComponent;
+	}
+
 	float GetMaxZPosition(){
 		return MaxZPosition;
 	}
@@ -125,6 +133,13 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	class UFoliageGenerationComponent* GrassGenerationComponent; //component for generating trees
+
+	UPROPERTY(VisibleAnywhere)
+	class UFoliageGenerationComponent* BushGenerationComponent; //component for generating trees
+
+	UPROPERTY(VisibleAnywhere)
+	class UFoliageGenerationComponent* BranchGenerationComponent; //component for generating trees
+
 
 	UPROPERTY()
 	TSubclassOf<class ACharacter> PlayerClass; //Class that is used to activate the trigger

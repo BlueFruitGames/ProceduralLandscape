@@ -33,6 +33,12 @@ public:
 	bool bGenerateTrees = false;//If trees should also be generated
 
 	UPROPERTY(EditAnywhere, Category = "General")
+	bool bGenerateBushes = false;//If bushes should also be generated
+
+	UPROPERTY(EditAnywhere, Category = "General")
+	bool bGenerateBranches = false;//If bushes should also be generated
+
+	UPROPERTY(EditAnywhere, Category = "General")
 	bool bGenerateGrass = false;//If grass should also be generated
 
 	UPROPERTY(EditAnywhere, Category = "General", meta = (UIMin = 1))
@@ -87,6 +93,9 @@ public:
 	int TreeMaxTries = 100; //Maximum number of tries to generate a new location
 
 	UPROPERTY(EditAnywhere, Category = "TreeGeneration")
+	int TreeMaxSpawnPerTick = 50;
+
+	UPROPERTY(EditAnywhere, Category = "TreeGeneration")
 	TArray<class UFoliageDataAsset*> TreeData; //Trees and their respective data for generation
 
 	UPROPERTY(EditAnywhere, Category = "TreeGeneration")
@@ -99,7 +108,34 @@ public:
 	int GrassMaxTries = 100; //Maximum number of tries to generate a new location
 
 	UPROPERTY(EditAnywhere, Category = "GrassGeneration")
+	int GrassMaxSpawnPerTick = 50; 
+
+	UPROPERTY(EditAnywhere, Category = "GrassGeneration")
 	TArray<class UFoliageDataAsset*> GrassData; //Grass types and their respective data for generation
+
+	UPROPERTY(EditAnywhere, meta = (UIMin = 1, UIMax = 100), Category = "BushGeneration")
+	int BushSpawnCount = 0;//Number of Grass per tile
+
+	UPROPERTY(EditAnywhere, Category = "BushGeneration")
+	int BushMaxTries = 100; //Maximum number of tries to generate a new location
+
+	UPROPERTY(EditAnywhere, Category = "BushGeneration")
+	int BushMaxSpawnPerTick = 50;
+
+	UPROPERTY(EditAnywhere, Category = "BushGeneration")
+	TArray<class UFoliageDataAsset*> BushData; //Grass types and their respective data for generation
+
+	UPROPERTY(EditAnywhere, meta = (UIMin = 1, UIMax = 100), Category = "BranchGeneration")
+	int BranchSpawnCount = 0;//Number of Grass per tile
+
+	UPROPERTY(EditAnywhere, Category = "BranchGeneration")
+	int BranchMaxTries = 100; //Maximum number of tries to generate a new location
+
+	UPROPERTY(EditAnywhere, Category = "BranchGeneration")
+	int BranchMaxSpawnPerTick = 50;
+
+	UPROPERTY(EditAnywhere, Category = "BranchGeneration")
+	TArray<class UFoliageDataAsset*> BranchData; //Grass types and their respective data for generation
 
 	/**
 	 * Initializes tiles for the specified drawing distance
@@ -115,6 +151,8 @@ public:
 	 */
 	void UpdateTiles(FTileIndex NewCenterIndex);
 
+	virtual void Tick(float DeltaSeconds);
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -127,6 +165,9 @@ private:
 	FTileIndex CenterTileIndex;
 
 	TMap<FTileIndex, AProceduralTile*> Tiles; //A tiles that currently exist
+
+	TMap<FTileIndex, UFoliageGenerationComponent*> TreesToSpawn;
+	TMap<FTileIndex, UFoliageGenerationComponent*> GrassToSpawn;
 
 	FTileGenerationParams TileGenerationParams;
 

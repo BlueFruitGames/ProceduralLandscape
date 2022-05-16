@@ -18,7 +18,6 @@ struct FGeneratedFoliageInfo {
 	float Radius;
 };
 
-
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class PROCEDURALLANDSCAPE_API UFoliageGenerationComponent : public USceneComponent
 {
@@ -36,7 +35,7 @@ public:
 	 * \param MaxTries_In The max number of tries to generate a new location
 	 * \param TreeMeshes_In The meshes for the foliage
 	 */
-	void SetupFoliageGeneration(int SpawnCount_In, int MaxTries_In, TArray<class UFoliageDataAsset*> FoliageData_In);
+	void SetupFoliageGeneration(int SpawnCount_In, int MaxTries_In, TArray<class UFoliageDataAsset*> FoliageData_In, bool bCollisionEnabled);
 
 	/**
 	 * Generates randomly placed foliage
@@ -47,7 +46,11 @@ public:
 	 * \param TraceZEnd the z value where the line trace  to find the ground should start
 	 * \param RandomSeed the random seed of the current game
 	 */
-	void GenerateFoliage(struct FTileIndex TileIndex, int TileSize, float TraceZStart, float TraceZEnd, int RandomSeed, TArray<FGeneratedFoliageInfo>& ExistingFoliageInfos, bool bDrawDebug = false);
+	void GenerateFoliage(bool bSpawnOutside, struct FTileIndex TileIndex, int TileSize, float TraceZStart, float TraceZEnd, int RandomSeed, TArray<FGeneratedFoliageInfo>& ExistingFoliageInfos, int SpawnBatchSize,  bool bSpawnDirect, bool bDrawDebug = false);
+
+	bool SpawnSingleBatch();
+
+	void SpawnAllBatches();
 
 	/**
 	 * Removes all trees in all HISMComponents.
@@ -66,16 +69,18 @@ private:
 	virtual bool DoesOverlap(FVector NewLocation, TArray<FGeneratedFoliageInfo>& FoliageInfos, float CurrentFoliageRadius);
 
 	UPROPERTY()
-		TArray<class UHierarchicalInstancedStaticMeshComponent*> HISMComponents; //All HISM Components of this TreeGenerationComponent
+	TArray<class UHierarchicalInstancedStaticMeshComponent*> HISMComponents; //All HISM Components of this TreeGenerationComponent
+
+	TMap<UHierarchicalInstancedStaticMeshComponent*, TArray<FTransformArrayA2>> InstanceBatchesPerComponent;
 
 	UPROPERTY()
-		int SpawnCount;//Number of foliage instances per tile
+	int SpawnCount;//Number of foliage instances per tile
 
 	UPROPERTY()
-		int MaxTries; //Maximum number of tries to generate a new location
+	int MaxTries; //Maximum number of tries to generate a new location
 
 	UPROPERTY()
-		TArray<UFoliageDataAsset*> FoliageData; //All foliage meshes which are currently used
+	TArray<UFoliageDataAsset*> FoliageData; //All foliage meshes which are currently used
 
 		
 };

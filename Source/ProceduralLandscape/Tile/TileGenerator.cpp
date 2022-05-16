@@ -9,12 +9,11 @@
 // Sets default values
 ATileGenerator::ATileGenerator()
 {
+	PrimaryActorTick.bCanEverTick = true;
 }
 
 void ATileGenerator::OnConstruction(const FTransform& Transform) {
 	if (bReloadInEditor) {
-		//CenterTileIndex.X = 0;
-		//CenterTileIndex.Y = 0;
 		GenerateTiles();
 	}
 }
@@ -27,6 +26,31 @@ void ATileGenerator::BeginPlay()
 	CenterTileIndex.Y = 0;
 	GenerateTiles();
 }
+
+
+
+void ATileGenerator::Tick(float DeltaSeconds)
+{
+	TSet<FTileIndex> TreeKeys;
+	TreesToSpawn.GetKeys(TreeKeys);
+	if (TreeKeys.Num() > 0) {
+		UFoliageGenerationComponent* TreeGenerationComponent = *TreesToSpawn.Find(TreeKeys.Array()[0]);
+		if (!TreeGenerationComponent->SpawnSingleBatch()) {
+			TreesToSpawn.Remove(TreeKeys.Array()[0]);
+		}
+	}
+
+	TSet<FTileIndex> GrassKeys;
+	GrassToSpawn.GetKeys(GrassKeys);
+	if (GrassKeys.Num() > 0) {
+		UFoliageGenerationComponent* GrassGenerationComponent = *GrassToSpawn.Find(GrassKeys.Array()[0]);
+		if (!GrassGenerationComponent->SpawnSingleBatch()) {
+			GrassToSpawn.Remove(GrassKeys.Array()[0]);
+		}
+	}
+
+}
+
 
 FTileGenerationParams ATileGenerator::SetupTileGenerationParams()
 {
@@ -72,13 +96,23 @@ void ATileGenerator::GenerateTiles()
 			CurrentTile->SetActorLabel(TileName);
 			TArray<FGeneratedFoliageInfo> GeneratedFoliageInfos;
 			if (bGenerateTrees) {
-				CurrentTile->GetTreeGenerationComponent()->SetupFoliageGeneration(TreeSpawnCount, TreeMaxTries, TreeData);
-				CurrentTile->GetTreeGenerationComponent()->GenerateFoliage(CurrentTileIndex, TileSize, CurrentTile->GetMaxZPosition() + 10, CurrentTile->GetMinZPosition() - 10, RandomSeed, GeneratedFoliageInfos, bDrawTreeDebug);
+				CurrentTile->GetTreeGenerationComponent()->SetupFoliageGeneration(TreeSpawnCount, TreeMaxTries, TreeData, true);
+				CurrentTile->GetTreeGenerationComponent()->GenerateFoliage(true, CurrentTileIndex, TileSize, CurrentTile->GetMaxZPosition() + 10, CurrentTile->GetMinZPosition() - 10, RandomSeed, GeneratedFoliageInfos, TreeMaxSpawnPerTick, true, bDrawTreeDebug);
+			}
+
+			if (bGenerateBranches) {
+				CurrentTile->GetBranchGenerationComponent()->SetupFoliageGeneration(BranchSpawnCount, BranchMaxTries, BranchData, false);
+				CurrentTile->GetBranchGenerationComponent()->GenerateFoliage(false, CurrentTileIndex, TileSize, CurrentTile->GetMaxZPosition() + 10, CurrentTile->GetMinZPosition() - 10, RandomSeed, GeneratedFoliageInfos, BranchMaxSpawnPerTick, true);
+			}
+
+			if (bGenerateBushes) {
+				CurrentTile->GetBushGenerationComponent()->SetupFoliageGeneration(BushSpawnCount, BushMaxTries, BushData, false);
+				CurrentTile->GetBushGenerationComponent()->GenerateFoliage(true, CurrentTileIndex, TileSize, CurrentTile->GetMaxZPosition() + 10, CurrentTile->GetMinZPosition() - 10, RandomSeed, GeneratedFoliageInfos, BushMaxSpawnPerTick, true, false);
 			}
 
 			if (bGenerateGrass) {
-				CurrentTile->GetGrassGenerationComponent()->SetupFoliageGeneration(GrassSpawnCount, GrassMaxTries, GrassData);
-				CurrentTile->GetGrassGenerationComponent()->GenerateFoliage(CurrentTileIndex, TileSize, CurrentTile->GetMaxZPosition() + 10, CurrentTile->GetMinZPosition() -10, RandomSeed, GeneratedFoliageInfos, false);
+				CurrentTile->GetGrassGenerationComponent()->SetupFoliageGeneration(GrassSpawnCount, GrassMaxTries, GrassData, false);
+				CurrentTile->GetGrassGenerationComponent()->GenerateFoliage(true, CurrentTileIndex, TileSize, CurrentTile->GetMaxZPosition() + 10, CurrentTile->GetMinZPosition() -10, RandomSeed, GeneratedFoliageInfos, GrassMaxSpawnPerTick, true, false);
 			}
 			Tiles.Add(CurrentTileIndex, CurrentTile);
 		}
@@ -115,19 +149,30 @@ void ATileGenerator::UpdateTiles(FTileIndex NewCenterIndex)
 		Tiles.Add(IndexToGenerate, TileToUpdate);
 		Tiles.Remove(IndexToUpdate);
 
+		
+
 		TArray<FGeneratedFoliageInfo> GeneratedFoliageInfos;
 		if (bGenerateTrees) {
 			TileToUpdate->GetTreeGenerationComponent()->ClearFoliage();
-			TileToUpdate->GetTreeGenerationComponent()->GenerateFoliage(IndexToGenerate, TileSize, TileToUpdate->GetMaxZPosition(), TileToUpdate->GetMinZPosition(), RandomSeed, GeneratedFoliageInfos, bDrawTreeDebug);
+			TileToUpdate->GetTreeGenerationComponent()->GenerateFoliage(true, IndexToGenerate, TileSize, TileToUpdate->GetMaxZPosition(), TileToUpdate->GetMinZPosition(), RandomSeed, GeneratedFoliageInfos, TreeMaxSpawnPerTick, true, bDrawTreeDebug);
+		}
+
+		if (bGenerateBranches) {
+			TileToUpdate->GetBranchGenerationComponent()->ClearFoliage();
+			TileToUpdate->GetBranchGenerationComponent()->GenerateFoliage(false, IndexToGenerate, TileSize, TileToUpdate->GetMaxZPosition(), TileToUpdate->GetMinZPosition(), RandomSeed, GeneratedFoliageInfos, BranchMaxSpawnPerTick, true);
+		}
+
+		if (bGenerateBushes) {
+			TileToUpdate->GetBushGenerationComponent()->ClearFoliage();
+			TileToUpdate->GetBushGenerationComponent()->GenerateFoliage(true, IndexToGenerate, TileSize, TileToUpdate->GetMaxZPosition(), TileToUpdate->GetMinZPosition(), RandomSeed, GeneratedFoliageInfos, TreeMaxSpawnPerTick, true);
 		}
 
 		if (bGenerateGrass) {
 			TileToUpdate->GetGrassGenerationComponent()->ClearFoliage();
-			TileToUpdate->GetGrassGenerationComponent()->GenerateFoliage(IndexToGenerate, TileSize, TileToUpdate->GetMaxZPosition(), TileToUpdate->GetMinZPosition(), RandomSeed, GeneratedFoliageInfos, bDrawTreeDebug);
+			TileToUpdate->GetGrassGenerationComponent()->GenerateFoliage(true, IndexToGenerate, TileSize, TileToUpdate->GetMaxZPosition(), TileToUpdate->GetMinZPosition(), RandomSeed, GeneratedFoliageInfos, GrassMaxSpawnPerTick, true);
 		}
 	}
 }
-
 void ATileGenerator::DeleteAllTiles() {
 	TArray<AProceduralTile*> Values;
 	Tiles.GenerateValueArray(Values);
