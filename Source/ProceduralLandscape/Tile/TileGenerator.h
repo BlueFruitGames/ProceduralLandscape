@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "ProceduralTile.h"
+#include "Foliage/FoliageGenerationThread.h"
 
 #include "TileGenerator.generated.h"
 
@@ -12,6 +13,8 @@ UCLASS()
 class PROCEDURALLANDSCAPE_API ATileGenerator : public AActor
 {
 	GENERATED_BODY()
+
+	friend class FFoliageGenerationThread;
 	
 public:	
 	// Sets default values for this actor's properties
@@ -40,6 +43,9 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "General")
 	bool bGenerateGrass = false;//If grass should also be generated
+
+	UPROPERTY(EditAnywhere, Category = "General")
+	float FoliageUpdateCooldown = 0.25;
 
 	UPROPERTY(EditAnywhere, Category = "General", meta = (UIMin = 1))
 	int TileSize; //Width of the tile
@@ -159,15 +165,17 @@ protected:
 
 	virtual void OnConstruction(const FTransform& Transform) override;	
 
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 private:
 
 	UPROPERTY(EditAnywhere)
 	FTileIndex CenterTileIndex;
 
-	TMap<FTileIndex, AProceduralTile*> Tiles; //A tiles that currently exist
+	UPROPERTY()
+	bool bIsFoliageThreadFinished = true;
 
-	TMap<FTileIndex, UFoliageGenerationComponent*> TreesToSpawn;
-	TMap<FTileIndex, UFoliageGenerationComponent*> GrassToSpawn;
+	TMap<FTileIndex, AProceduralTile*> Tiles; //A tiles that currently exist
 
 	FTileGenerationParams TileGenerationParams;
 
@@ -183,4 +191,18 @@ private:
 	 * \return the parameters that will be used for the tile generation
 	 */
 	FTileGenerationParams SetupTileGenerationParams();
+
+	TQueue<FFoliageGenerationThread*> FoliageGenerationThreads;
+
+	class FRunnableThread* RunningThread;
+
+	class FFoliageGenerationThread* CurrentFoliageThread;
+
+	TArray<struct FGeneratedFoliageInfo> LastGeneratedFoliageInfos;
+
+	TArray<UFoliageGenerationComponent*> FoliageComponentsToUpdate;
+
+	struct FTileIndex LastTileIndex;
+
+	float CurrentUpdateTime = 0.f;
 };

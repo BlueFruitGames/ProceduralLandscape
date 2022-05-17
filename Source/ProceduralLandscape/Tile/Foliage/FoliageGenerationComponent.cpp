@@ -17,12 +17,11 @@ UFoliageGenerationComponent::UFoliageGenerationComponent()
 	
 }
 
-void UFoliageGenerationComponent::SetupFoliageGeneration(int SpawnCount_In, int MaxTries_In, int BatchSize_In, bool bSpawnDirect_In, TArray<UFoliageDataAsset*> FoliageData_In, int RandomSeed_In, bool bCollisionEnabled)
+void UFoliageGenerationComponent::SetupFoliageGeneration(int SpawnCount_In, int MaxTries_In, int BatchSize_In, TArray<UFoliageDataAsset*> FoliageData_In, int RandomSeed_In, bool bCollisionEnabled)
 {
 	SpawnCount = SpawnCount_In;
 	MaxTries = MaxTries_In;
 	BatchSize = BatchSize_In;
-	bSpawnDirect = bSpawnDirect_In;
 	RandomSeed = RandomSeed_In;
 	FoliageData = FoliageData_In;
 	for (UFoliageDataAsset* FoliageDatum : FoliageData) {
@@ -41,21 +40,28 @@ void UFoliageGenerationComponent::SetupFoliageGeneration(int SpawnCount_In, int 
 	}
 }
 
-void UFoliageGenerationComponent::GenerateFoliage(FTileIndex TileIndex, int TileSize, float TraceZStart, float TraceZEnd, TArray<FGeneratedFoliageInfo>& FoliageInfos, bool bDrawDebug)
+void UFoliageGenerationComponent::GenerateFoliage(bool bSpawnDirect, FTileIndex TileIndex, int TileSize, float TraceZStart, float TraceZEnd, TArray<FGeneratedFoliageInfo>& FoliageInfos, bool bDrawDebug)
 {
-	
+	Lock.Lock();
+	TransformsToUpdate.Empty();
+	TransformsToAdd.Empty();
+	IndicesToRemove.Empty();
+	TArray<int> UpdatedIndices;
+
+	for (UHierarchicalInstancedStaticMeshComponent* HISMComponent : HISMComponents) {
+		TransformsToUpdate.Add(FTransformArrayA2());
+		TransformsToAdd.Add(FTransformArrayA2());
+		IndicesToRemove.Add(TArray<int>());
+		bRemoveInstances.Add(true);
+		UpdatedIndices.Add(0);
+	}
+
+
 	if (HISMComponents.Num() == 0) return;
 	FRandomStream RandomStream((TileIndex.X * 10000 + TileIndex.Y) * RandomSeed + RandomSeed);
 	TArray<FTileBounds> TileBounds = InitializeBounds(TileIndex, TileSize);
 	int Count = 0;
 	int Tries = 0;
-
-	TArray<int> CurrentIndices;
-	for (UHierarchicalInstancedStaticMeshComponent* HISMComponent : HISMComponents) {
-		CurrentIndices.Add(0);
-	}
-
-	//TMap<UHierarchicalInstancedStaticMeshComponent*, TArray<FTransformArrayA2>> NewInstanceBatchesPerComponent = InitializeEmptyBatch();
 
 	while (Count < SpawnCount && Tries < MaxTries) {
 		int HISMComponentIndex;
@@ -95,18 +101,17 @@ void UFoliageGenerationComponent::GenerateFoliage(FTileIndex TileIndex, int Tile
 			
 			if (bSpawnDirect) {
 				HISMComponents[HISMComponentIndex]->AddInstance(Transform, true);
-				if (CurrentIndices[HISMComponentIndex] < HISMComponents[HISMComponentIndex]->GetInstanceCount()) {
-					//HISMComponents[HISMComponentIndex]->UpdateInstanceTransform(CurrentIndices[HISMComponentIndex], Transform, true);
-				}
-				else {
-					HISMComponents[HISMComponentIndex]->AddInstance(Transform, true);
-				}
-				CurrentIndices[HISMComponentIndex] += 1;
+			}
+			else if (UpdatedIndices[HISMComponentIndex] >= HISMComponents[HISMComponentIndex]->GetInstanceCount()) {
+				TransformsToAdd[HISMComponentIndex].Add(Transform);
+				bRemoveInstances[HISMComponentIndex] = false;
 			}
 			else {
-				//AddToBatch(NewInstanceBatchesPerComponent, HISMComponents[HISMComponentIndex], Transform);
+				TransformsToUpdate[HISMComponentIndex].Add(Transform);
 			}
-
+			
+	
+			UpdatedIndices[HISMComponentIndex] += 1;
 			Tries = 0;
 			Count += 1;
 		}
@@ -114,60 +119,44 @@ void UFoliageGenerationComponent::GenerateFoliage(FTileIndex TileIndex, int Tile
 
 	for (int i = 0; i < HISMComponents.Num(); ++i) {
 		UHierarchicalInstancedStaticMeshComponent* HISMComponent = HISMComponents[i];
-		int CurrentIndex = CurrentIndices[i];
-		while (CurrentIndex < HISMComponent->GetInstanceCount()) {
-			//HISMComponent->RemoveInstance(CurrentIndex);
+		while (UpdatedIndices[i] < HISMComponent->GetInstanceCount()) {
+			IndicesToRemove[i].Add(UpdatedIndices[i]);
+			UpdatedIndices[i] += 1;
 		}
 	}
 
-	//InstanceBatchesPerComponent = NewInstanceBatchesPerComponent;
-
-	return;
+	Lock.Unlock();
 }
 
-bool UFoliageGenerationComponent::SpawnSingleBatch()
+bool UFoliageGenerationComponent::UpdateFoliage()
 {
-	TSet<UHierarchicalInstancedStaticMeshComponent*> Keys;
-	InstanceBatchesPerComponent.GetKeys(Keys);
-
-	if (Keys.Num() <= 0) return false;
-	UHierarchicalInstancedStaticMeshComponent*  HISMComponent = Keys.Array()[0];
-
-	TArray<FTransformArrayA2>* Batches = InstanceBatchesPerComponent.Find(HISMComponent);
-	HISMComponent->AddInstances((*Batches)[0], false, true);
-	Batches->RemoveAt(0);
-	if (Batches->Num() <= 0) {
-		InstanceBatchesPerComponent.Remove(HISMComponent);
-		Keys.Array().Remove(0);
-	}
-	if (Keys.Array().Num() <= 0) {
-		return false;
-	}
-	return true;	
-}
-
-void UFoliageGenerationComponent::SpawnAllBatches()
-{
-	TSet<UHierarchicalInstancedStaticMeshComponent*> Keys;
-	InstanceBatchesPerComponent.GetKeys(Keys);
-
-	if (Keys.Num() <= 0) return;
-
-	for (UHierarchicalInstancedStaticMeshComponent* HISMComponent : Keys) {
-		TArray<FTransformArrayA2>* Batches = InstanceBatchesPerComponent.Find(HISMComponent);
-		while (Batches->Num() > 0) {
-			HISMComponent->AddInstances((*Batches)[0], false, true);
-			Batches->RemoveAt(0);
+	bool bSuccess = true;
+	if (Lock.TryLock()) {
+		for (int i = 0; i < HISMComponents.Num(); ++i) {
+			if (TransformsToUpdate[i].Num() > 0) {
+				HISMComponents[i]->BatchUpdateInstancesTransforms(0, TransformsToUpdate[i], true);
+				TransformsToUpdate[i].Empty();
+			}
+			if (IndicesToRemove[i].Num() > 0 && bRemoveInstances[i]) {
+				HISMComponents[i]->RemoveInstances(IndicesToRemove[i]);
+				IndicesToRemove[i].Empty();
+				UE_LOG(LogTemp, Warning, TEXT("REmove"));
+			}
+			else if(TransformsToAdd[i].Num() > 0 && !bRemoveInstances[i]){
+				HISMComponents[i]->AddInstances(TransformsToAdd[i], false, true);
+				TransformsToAdd[i].Empty();
+				UE_LOG(LogTemp, Warning, TEXT("Add"));
+			}
+			if(TransformsToUpdate[i].Num() > 0 || IndicesToRemove[i].Num() > 0 || TransformsToAdd[i].Num() > 0) {
+				bSuccess = false;
+			}
 		}
-		InstanceBatchesPerComponent.Remove(HISMComponent);
+		Lock.Unlock();
+	}	
+	else {
+		bSuccess = false;
 	}
-}
-
-void UFoliageGenerationComponent::ClearFoliage()
-{
-	for (UHierarchicalInstancedStaticMeshComponent* HISMComponent : HISMComponents) {
-		HISMComponent->ClearInstances();
-	}
+	return bSuccess;
 }
 
 bool UFoliageGenerationComponent::DoesOverlap(FVector NewLocation, TArray<FGeneratedFoliageInfo> FoliageInfos, float CurrentFoliageRadius, float& Distance, float& ClosestRadius, UCurveFloat*& GrowthCurve)
@@ -204,31 +193,6 @@ TArray<FTileBounds> UFoliageGenerationComponent::InitializeBounds(FTileIndex Til
 	}
 
 	return TileBounds;
-}
-
-TMap<UHierarchicalInstancedStaticMeshComponent*, TArray<FTransformArrayA2>> UFoliageGenerationComponent::InitializeEmptyBatch()
-{
-	TMap<UHierarchicalInstancedStaticMeshComponent*, TArray<FTransformArrayA2>> NewInstanceBatchesPerComponent;
-	for (UHierarchicalInstancedStaticMeshComponent* HISMComponent : HISMComponents) {
-		TArray<FTransformArrayA2> Batches;
-		FTransformArrayA2 Current;
-		Batches.Add(Current);
-		NewInstanceBatchesPerComponent.Add(HISMComponent, Batches);
-	}
-	return NewInstanceBatchesPerComponent;
-}
-
-void UFoliageGenerationComponent::AddToBatch(TMap<UHierarchicalInstancedStaticMeshComponent*, TArray<FTransformArrayA2>>& Batches, UHierarchicalInstancedStaticMeshComponent* HISMComponent, FTransform Transform)
-{
-	TArray<FTransformArrayA2>* ComponentBatches = Batches.Find(HISMComponent);
-	if ((*ComponentBatches)[ComponentBatches->Num() - 1].Num() < BatchSize) {
-		(*ComponentBatches)[ComponentBatches->Num() - 1].Add(Transform);
-	}
-	else {
-		FTransformArrayA2 NewBatch;
-		NewBatch.Add(Transform);
-		ComponentBatches->Add(NewBatch);
-	}
 }
 
 void UFoliageGenerationComponent::GenerateRandomInstance(TArray<FTileBounds> TileBounds, FRandomStream& RandomStream, float TraceZStart, float TraceZEnd, int& HISMComponentIndex, FVector& Location)
