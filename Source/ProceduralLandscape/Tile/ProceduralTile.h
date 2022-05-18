@@ -177,7 +177,7 @@ private:
 	 * \param UV0 reference to the array that stores the uvs
 	 * \param VertexColor reference to the array that stores the vertex colors
 	 */
-	void SetupParamsCreation(FTileGenerationParams TileGenerationParams, TArray<FVector>& Vertices, TArray<int32>& Triangles, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FLinearColor>& VertexColor);
+	void SetupParamsCreation(FTileGenerationParams TileGenerationParams, TArray<FVector>& Vertices, TArray<int32>& Triangles, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FColor>& VertexColor);
 	
 	/**
 	 * Sets up the Parameters for updating an existing mesh
@@ -188,7 +188,7 @@ private:
 	 * \param UV0 reference to the array that stores the uvs
 	 * \param VertexColor reference to the array that stores the vertex colors
 	 */
-	void SetupParamsUpdate(FTileGenerationParams TileGenerationParams, TArray<FVector>& Vertices, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FLinearColor>& VertexColor);
+	void SetupParamsUpdate(FTileGenerationParams TileGenerationParams, TArray<FVector>& Vertices, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FColor>& VertexColor);
 	
 	/**
 	 * Generates the information that is related to the vertices
@@ -204,7 +204,7 @@ private:
 	 * \param Column current column
 	 * \param DistanceBetweenVertices the distance between two vertices
 	 */
-	void GenerateVertexInformation(TArray<FVector>& Vertices, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FLinearColor>& VertexColor, float& MinZOffset, float& MaxZOffset, FTileGenerationParams TileGenerationParams, int Row, int Column, float DistanceBetweenVertices);
+	void GenerateVertexInformation(TArray<FVector>& Vertices, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FColor>& VertexColor, float& MinZOffset, float& MaxZOffset, FTileGenerationParams TileGenerationParams, int Row, int Column, float DistanceBetweenVertices);
 
 	/**
 	 * Adds a triangle for the Vertices V1, V2, V3

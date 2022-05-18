@@ -5,7 +5,6 @@
 
 #include "ProceduralMeshComponent.h"
 #include "TileGenerator.h"
-#include "Foliage/FoliageGenerationComponent.h"
 
 #include "Components/BoxComponent.h"
 #include "GameFramework/Character.h"
@@ -64,19 +63,25 @@ void AProceduralTile::GenerateTile(FTileGenerationParams TileGenerationParams, b
 	TArray<int32> Triangles;
 	TArray<FVector> Normals;
 	TArray<FVector2D> UV0;
-	TArray<FLinearColor> VertexColor;
+	TArray<FColor> VertexColor;
 
 	TileIndex = TileGenerationParams.TileIndex;
 	if (bIsUpdate) SetupParamsUpdate(TileGenerationParams, Vertices, Normals, UV0, VertexColor);
 	else SetupParamsCreation(TileGenerationParams, Vertices, Triangles, Normals, UV0, VertexColor);
 
 	if (ProceduralMeshComponent) {
-		if(bIsUpdate) ProceduralMeshComponent->UpdateMeshSection_LinearColor(0, Vertices, Normals, UV0, VertexColor, TArray<FProcMeshTangent>());
-		else ProceduralMeshComponent->CreateMeshSection_LinearColor(0, Vertices, Triangles, Normals, UV0, VertexColor, TArray<FProcMeshTangent>(), true);
+		if (bIsUpdate) {
+			ProceduralMeshComponent->UpdateMeshSection(0, Vertices, Normals, UV0, VertexColor, TArray<FProcMeshTangent>());
+			ProceduralMeshComponent->AddCollisionConvexMesh(Vertices);
+		}
+		else {
+			ProceduralMeshComponent->CreateMeshSection(0, Vertices, Triangles, Normals, UV0, VertexColor, TArray<FProcMeshTangent>(), true);
+			ProceduralMeshComponent->AddCollisionConvexMesh(Vertices);
+		}
 	}
 }
 
-void AProceduralTile::SetupParamsCreation(FTileGenerationParams TileGenerationParams, TArray<FVector>& Vertices, TArray<int32>& Triangles, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FLinearColor>& VertexColor) {
+void AProceduralTile::SetupParamsCreation(FTileGenerationParams TileGenerationParams, TArray<FVector>& Vertices, TArray<int32>& Triangles, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FColor>& VertexColor) {
 	float StartOffset = float(TileGenerationParams.TileSize) / 2;
 	float DistanceBetweenVertices = float(TileGenerationParams.TileSize) / (TileGenerationParams.TileResolution - 1);
 
@@ -98,7 +103,7 @@ void AProceduralTile::SetupParamsCreation(FTileGenerationParams TileGenerationPa
 	MinZPosition = MinZOffset;
 }
 
-void AProceduralTile::SetupParamsUpdate(FTileGenerationParams TileGenerationParams, TArray<FVector>& Vertices, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FLinearColor>& VertexColor) {
+void AProceduralTile::SetupParamsUpdate(FTileGenerationParams TileGenerationParams, TArray<FVector>& Vertices, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FColor>& VertexColor) {
 	float StartOffset = float(TileGenerationParams.TileSize) / 2;
 	float DistanceBetweenVertices = float(TileGenerationParams.TileSize) / (TileGenerationParams.TileResolution - 1);
 
@@ -117,7 +122,7 @@ void AProceduralTile::SetupParamsUpdate(FTileGenerationParams TileGenerationPara
 	MinZPosition = MinZOffset;
 }
 
-void AProceduralTile::GenerateVertexInformation(TArray<FVector>& Vertices, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FLinearColor>& VertexColor, float& MinZOffset, float& MaxZOffset, FTileGenerationParams TileGenerationParams, int Row, int Column, float DistanceBetweenVertices)
+void AProceduralTile::GenerateVertexInformation(TArray<FVector>& Vertices, TArray<FVector>& Normals, TArray<FVector2D>& UV0, TArray<FColor>& VertexColor, float& MinZOffset, float& MaxZOffset, FTileGenerationParams TileGenerationParams, int Row, int Column, float DistanceBetweenVertices)
 {
 	float CurrentXOffset = float(TileGenerationParams.TileSize) / 2 - DistanceBetweenVertices * Row;
 	float CurrentYOffset = float(TileGenerationParams.TileSize) / 2 - DistanceBetweenVertices * Column;
@@ -137,7 +142,7 @@ void AProceduralTile::GenerateVertexInformation(TArray<FVector>& Vertices, TArra
 
 	Normals.Add(CalculateVertexNormal(CurrentXOffset + TileGenerationParams.TileIndex.X * TileGenerationParams.TileSize, CurrentYOffset + TileGenerationParams.TileIndex.Y * TileGenerationParams.TileSize, DistanceBetweenVertices, TileGenerationParams));
 	UV0.Add(FVector2D(UPos, VPos));
-	VertexColor.Add(FLinearColor(CurrentZOffset, 1 - CurrentZOffset, MicroZOffset));
+	VertexColor.Add(FColor(CurrentZOffset, 1 - CurrentZOffset, MicroZOffset));
 }
 
 
