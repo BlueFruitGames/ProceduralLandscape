@@ -17,9 +17,10 @@ UFoliageGenerationComponent::UFoliageGenerationComponent()
 	
 }
 
-void UFoliageGenerationComponent::SetupFoliageGeneration(int SpawnCount_In, int MaxTries_In, int BatchSize_In, TArray<UFoliageDataAsset*> FoliageData_In, int RandomSeed_In, bool bCollisionEnabled)
+void UFoliageGenerationComponent::SetupFoliageGeneration(bool bUseCulling, float CullDistance, int SpawnCount_In, int MaxTries_In, int BatchSize_In, TArray<UFoliageDataAsset*> FoliageData_In, int RandomSeed_In, bool bCollisionEnabled)
 {
 	SpawnCount = SpawnCount_In;
+	MaxTries = MaxTries_In;
 	MaxTries = MaxTries_In;
 	BatchSize = BatchSize_In;
 	RandomSeed = RandomSeed_In;
@@ -31,6 +32,9 @@ void UFoliageGenerationComponent::SetupFoliageGeneration(int SpawnCount_In, int 
 		CurrentHISMComponent->SetWorldLocation(FVector(0, 0, 0));
 		CurrentHISMComponent->AttachToComponent(this, FAttachmentTransformRules::KeepWorldTransform);
 		CurrentHISMComponent->SetStaticMesh(FoliageDatum->FoliageMesh);
+		if (bUseCulling) {
+			CurrentHISMComponent->SetCullDistances(0, CullDistance);
+		}
 		if (!bCollisionEnabled) {
 			CurrentHISMComponent->SetCastShadow(false);
 			CurrentHISMComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -43,17 +47,10 @@ void UFoliageGenerationComponent::SetupFoliageGeneration(int SpawnCount_In, int 
 void UFoliageGenerationComponent::GenerateFoliage(bool bSpawnDirect, FTileIndex TileIndex, int TileSize, float TraceZStart, float TraceZEnd, TArray<FGeneratedFoliageInfo>& FoliageInfos, bool bDrawDebug)
 {
 	Lock.Lock();
-	TransformsToUpdate.Empty();
-	TransformsToAdd.Empty();
-	IndicesToRemove.Empty();
-	TArray<int> UpdatedIndices;
+	InstancesToSpawn.Empty();
 
 	for (UHierarchicalInstancedStaticMeshComponent* HISMComponent : HISMComponents) {
-		TransformsToUpdate.Add(FTransformArrayA2());
-		TransformsToAdd.Add(FTransformArrayA2());
-		IndicesToRemove.Add(TArray<int>());
-		bRemoveInstances.Add(true);
-		UpdatedIndices.Add(0);
+		InstancesToSpawn.Add(FTransformArrayA2());
 	}
 
 
@@ -85,8 +82,19 @@ void UFoliageGenerationComponent::GenerateFoliage(bool bSpawnDirect, FTileIndex 
 		else {
 			FTransform Transform;
 			float HalfHeight = FoliageData[HISMComponentIndex]->FoliageMesh->GetBounds().GetSphere().W / 2;
-			float Scale = RandomStream.FRandRange(FoliageData[HISMComponentIndex]->Scale - FoliageData[HISMComponentIndex]->ScaleRandomDiviation, FoliageData[HISMComponentIndex]->Scale + FoliageData[HISMComponentIndex]->ScaleRandomDiviation);
-			Transform.MultiplyScale3D(FVector(Scale * GrowthFactor));
+			FVector Scale;
+			if (FoliageData[HISMComponentIndex]->bUniformScale) {
+				float Rand = RandomStream.FRandRange(-FoliageData[HISMComponentIndex]->ScaleRandomDiviationUniform, FoliageData[HISMComponentIndex]->ScaleRandomDiviationUniform);
+				Scale = FVector(FoliageData[HISMComponentIndex]->ScaleUniform + Rand);
+			}
+			else {
+				float ScaleX = RandomStream.FRandRange(FoliageData[HISMComponentIndex]->Scale.X - FoliageData[HISMComponentIndex]->ScaleRandomDiviation.X, FoliageData[HISMComponentIndex]->Scale.X + FoliageData[HISMComponentIndex]->ScaleRandomDiviation.X);
+				float ScaleY = RandomStream.FRandRange(FoliageData[HISMComponentIndex]->Scale.Y - FoliageData[HISMComponentIndex]->ScaleRandomDiviation.Y, FoliageData[HISMComponentIndex]->Scale.Y + FoliageData[HISMComponentIndex]->ScaleRandomDiviation.Y);
+				float ScaleZ = RandomStream.FRandRange(FoliageData[HISMComponentIndex]->Scale.Z - FoliageData[HISMComponentIndex]->ScaleRandomDiviation.Z, FoliageData[HISMComponentIndex]->Scale.Z + FoliageData[HISMComponentIndex]->ScaleRandomDiviation.Z);
+				Scale = FVector(ScaleX, ScaleY, ScaleZ);
+			}
+			
+			Transform.MultiplyScale3D(Scale * GrowthFactor);
 			Transform.SetLocation(Location);
 			FRotator Rotation;
 			Rotation.Yaw = RandomStream.FRandRange(-180, 180);
@@ -100,32 +108,25 @@ void UFoliageGenerationComponent::GenerateFoliage(bool bSpawnDirect, FTileIndex 
 			FoliageInfos.Add(GeneratedFoliageInfo);
 			
 			if (bSpawnDirect) {
-				HISMComponents[HISMComponentIndex]->AddInstance(Transform, true);
-			}
-			else if (UpdatedIndices[HISMComponentIndex] >= HISMComponents[HISMComponentIndex]->GetInstanceCount()) {
-				TransformsToAdd[HISMComponentIndex].Add(Transform);
-				bRemoveInstances[HISMComponentIndex] = false;
+				HISMComponents[HISMComponentIndex]->AddInstance(Transform);
 			}
 			else {
-				TransformsToUpdate[HISMComponentIndex].Add(Transform);
+				InstancesToSpawn[HISMComponentIndex].Add(Transform);
 			}
-			
-	
-			UpdatedIndices[HISMComponentIndex] += 1;
+
 			Tries = 0;
 			Count += 1;
 		}
 	}
 
-	for (int i = 0; i < HISMComponents.Num(); ++i) {
-		UHierarchicalInstancedStaticMeshComponent* HISMComponent = HISMComponents[i];
-		while (UpdatedIndices[i] < HISMComponent->GetInstanceCount()) {
-			IndicesToRemove[i].Add(UpdatedIndices[i]);
-			UpdatedIndices[i] += 1;
-		}
-	}
-
 	Lock.Unlock();
+}
+
+void UFoliageGenerationComponent::ClearFoliage()
+{
+	for (UHierarchicalInstancedStaticMeshComponent* HISMComponent : HISMComponents) {
+		HISMComponent->ClearInstances();
+	}
 }
 
 bool UFoliageGenerationComponent::UpdateFoliage()
@@ -133,22 +134,20 @@ bool UFoliageGenerationComponent::UpdateFoliage()
 	bool bSuccess = true;
 	if (Lock.TryLock()) {
 		for (int i = 0; i < HISMComponents.Num(); ++i) {
-			if (TransformsToUpdate[i].Num() > 0) {
-				HISMComponents[i]->BatchUpdateInstancesTransforms(0, TransformsToUpdate[i], true);
-				TransformsToUpdate[i].Empty();
-			}
-			if (IndicesToRemove[i].Num() > 0 && bRemoveInstances[i]) {
-				HISMComponents[i]->RemoveInstances(IndicesToRemove[i]);
-				IndicesToRemove[i].Empty();
-				UE_LOG(LogTemp, Warning, TEXT("REmove"));
-			}
-			else if(TransformsToAdd[i].Num() > 0 && !bRemoveInstances[i]){
-				HISMComponents[i]->AddInstances(TransformsToAdd[i], false, true);
-				TransformsToAdd[i].Empty();
-				UE_LOG(LogTemp, Warning, TEXT("Add"));
-			}
-			if(TransformsToUpdate[i].Num() > 0 || IndicesToRemove[i].Num() > 0 || TransformsToAdd[i].Num() > 0) {
-				bSuccess = false;
+			if (InstancesToSpawn[i].Num() > 0) {
+				if (InstancesToSpawn[i].Num() <= BatchSize) {
+					HISMComponents[i]->AddInstances(InstancesToSpawn[i], false, true);
+					InstancesToSpawn[i].Empty();
+				}
+				else {
+					FTransformArrayA2 CurrentBatch;
+					for (int j = 0; j < BatchSize; ++j) {
+						CurrentBatch.Add(InstancesToSpawn[i][0]);
+						InstancesToSpawn[i].RemoveAt(0);
+					}
+					HISMComponents[i]->AddInstances(CurrentBatch, false, true);
+					bSuccess = false;
+				}
 			}
 		}
 		Lock.Unlock();

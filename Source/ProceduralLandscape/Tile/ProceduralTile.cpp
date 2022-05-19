@@ -11,7 +11,6 @@
 
 #define COLLISION_GROUND ECC_GameTraceChannel1
 
-// Sets default values
 AProceduralTile::AProceduralTile()
 {
 	ProceduralMeshComponent = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("PorceduralMeshComponent"));
@@ -52,7 +51,6 @@ void AProceduralTile::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, A
 		if (TileGenerator)
 		{
 			TileGenerator->UpdateTiles(TileIndex);
-			UE_LOG(LogTemp, Warning, TEXT("TileGenerator"));
 		}
 		else UE_LOG(LogTemp, Warning, TEXT("No TileGenerator"));
 	}

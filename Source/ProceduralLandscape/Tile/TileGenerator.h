@@ -20,128 +20,177 @@ public:
 	// Sets default values for this actor's properties
 	ATileGenerator();
 
+	//The class which is used for the player character
 	UPROPERTY(EditAnywhere, Category = "General")
-	TSubclassOf<ACharacter> PlayerClass; //The class which is used for the player character
+	TSubclassOf<ACharacter> PlayerClass; 
 
+	//The global RandomSeed for every landscape operation which involes random number generation
 	UPROPERTY(EditAnywhere, Category="General")
-	int RandomSeed = 1;//The global RandomSeed for every landscape operation which involes random number generation
+	int RandomSeed = 1;
 
+	//How many layers of additional Tiles are generated
 	UPROPERTY(EditAnywhere, Category = "General", meta = (UIMin = 0))
-	int DrawDistance = 1;//How many layers of additional Tiles are generated
+	int DrawDistance = 1;
 
+	//Width of the tile
 	UPROPERTY(EditAnywhere, Category = "General", meta = (UIMin = 1))
-	bool bReloadInEditor;//Should the mesh be updated in the editor if changes are made to it's properties?
+	int TileSize;
 
-	UPROPERTY(EditAnywhere, Category = "General")
-	bool bGenerateTrees = false;//If trees should also be generated
+	//Count of vertices on each axis
+	UPROPERTY(EditAnywhere, Category = "General", meta = (UIMin = 2, UIMax = 100))
+	int TileResolution;
 
+	//Material that will be applied to each tile
 	UPROPERTY(EditAnywhere, Category = "General")
-	bool bGenerateBushes = false;//If bushes should also be generated
+	UMaterialInterface* LandscapeMaterial;
 
-	UPROPERTY(EditAnywhere, Category = "General")
-	bool bGenerateBranches = false;//If bushes should also be generated
+	//Should the mesh be updated in the editor if changes are made to it's properties?
+	UPROPERTY(EditAnywhere, Category = "General", meta = (UIMin = 1))
+	bool bReloadInEditor;
 
-	UPROPERTY(EditAnywhere, Category = "General")
-	bool bGenerateGrass = false;//If grass should also be generated
+	//Influence of the PerlinNoise
+	UPROPERTY(EditAnywhere, Category = "MajorNoise", meta = (UIMin = 0))
+	int MajorNoiseStrength; 
 
-	UPROPERTY(EditAnywhere, Category = "General")
+	//X and Y offset of the PerlinNoise
+	UPROPERTY(EditAnywhere, Category = "MajorNoise")
+	FVector2D MajorNoiseOffset;
+
+	//X and Y scale of the PerlinNoise
+	UPROPERTY(EditAnywhere, Category = "MajorNoise")
+	FVector2D MajorNoiseScale;
+
+	//Randomness for the strength value
+	UPROPERTY(EditAnywhere, Category = "MajorNoise|Randomness")
+	float MajorNoiseStrengthDeviation = 0.0f;
+
+	//Randomness for the offset value
+	UPROPERTY(EditAnywhere, Category = "MajorNoise|Randomness")
+	float MajorNoiseOffsetDeviation = 0.0f;
+
+	//Randomness for the scale value
+	UPROPERTY(EditAnywhere, Category = "MajorNoise|Randomness")
+	float MajorNoiseScaleDeviation = 0.0f; 
+
+	//The influence of the PerlinNoise
+	UPROPERTY(EditAnywhere, Category = "MinorNoise", meta = (UIMin = 0))
+	int MinorNoiseStrength;
+
+	//X and Y offset of the PerlinNoise
+	UPROPERTY(EditAnywhere, Category = "MinorNoise")
+	FVector2D MinorNoiseOffset;
+
+	//X and Y scale of the PerlinNoise
+	UPROPERTY(EditAnywhere, Category = "MinorNoise")
+	FVector2D MinorNoiseScale;
+
+	//Randomness for the strength value
+	UPROPERTY(EditAnywhere, Category = "MinorNoise|Randomness")
+	float MinorNoiseStrengthDeviation = 0.0f;
+
+	//Randomness for the offset value
+	UPROPERTY(EditAnywhere, Category = "MinorNoise|Randomness")
+	float MinorNoiseOffsetDeviation = 0.0f;
+
+	//Randomness for the scale value
+	UPROPERTY(EditAnywhere, Category = "MinorNoise|Randomness")
+	float MinorNoiseScaleDeviation = 0.0f;
+
+	//If trees should be generated
+	UPROPERTY(EditAnywhere, Category = "Foliage|General")
+	bool bGenerateTrees = false;
+
+	//If grass should be generated
+	UPROPERTY(EditAnywhere, Category = "Foliage|General")
+	bool bGenerateGrass = false;
+
+	// If bushes should be generated
+	UPROPERTY(EditAnywhere, Category = "Foliage|General")
+	bool bGenerateBushes = false;
+
+	//If bushes should also generated
+	UPROPERTY(EditAnywhere, Category = "Foliage|General")
+	bool bGenerateBranches = false;
+
+	//Time until spawning a new foliage batch
+	UPROPERTY(EditAnywhere, Category = "Foliage|General")
 	float FoliageUpdateCooldown = 0.25;
 
-	UPROPERTY(EditAnywhere, Category = "General", meta = (UIMin = 1))
-	int TileSize; //Width of the tile
+	//Should occlusion culling be applied?
+	UPROPERTY(EditAnywhere, Category = "Foliage|General")
+	bool bUseCulling = false;
 
-	UPROPERTY(EditAnywhere, Category = "General", meta = (UIMin = 2, UIMax = 100))
-	int TileResolution;//Count of vertices on each axis
+	//End distance of occlusion culling
+	UPROPERTY(EditAnywhere, Category = "Foliage|General", meta = (EditCondition = "bUseCulling"))
+	float FoliageCullDistance = 1000;
 
-	UPROPERTY(EditAnywhere, Category = "MajorNoise", meta = (UIMin = 0))
-	int MajorNoiseStrength; //The influence of the PerlinNoise
+	//Number of trees per tile
+	UPROPERTY(EditAnywhere, Category = "Foliage|TreeGeneration", meta = (UIMin = 1, UIMax = 100, EditCondition = "bGenerateTrees"))
+	int TreeSpawnCount = 0;
 
-	UPROPERTY(EditAnywhere, Category = "MajorNoise")
-	FVector2D MajorNoiseOffset; //X and Y offset of the PerlinNoise
+	//Max number of tries to generate a new tree location
+	UPROPERTY(EditAnywhere, Category = "Foliage|TreeGeneration", meta = (EditCondition = "bGenerateTrees"))
+	int TreeMaxTries = 100; 
 
-	UPROPERTY(EditAnywhere, Category = "MajorNoise")
-	FVector2D MajorNoiseScale;//X and Y scale of the PerlinNoise
+	//How many trees to spawn each batch
+	UPROPERTY(EditAnywhere, Category = "Foliage|TreeGeneration", meta = (EditCondition = "bGenerateTrees"))
+	int TreeBatchSize = 50;
 
-	UPROPERTY(EditAnywhere, Category = "MajorNoise|Randomness")
-	float MajorNoiseStrengthDeviation = 0.0f; //Adjusts bounds of random number generation for the strength value
+	//Trees and their respective data for generation
+	UPROPERTY(EditAnywhere, Category = "Foliage|TreeGeneration", meta = (EditCondition = "bGenerateTrees"))
+	TArray<class UFoliageDataAsset*> TreeData; 
 
-	UPROPERTY(EditAnywhere, Category = "MajorNoise|Randomness")
-	float MajorNoiseOffsetDeviation = 0.0f; //Adjusts bounds of random number generation for the offset value
+	//Should the radius of the trees be visualized?
+	UPROPERTY(EditAnywhere, Category = "Foliage|TreeGeneration", meta = (EditCondition = "bGenerateTrees"))
+	bool bDrawTreeDebug = false;
 
-	UPROPERTY(EditAnywhere, Category = "MajorNoise|Randomness")
-	float MajorNoiseScaleDeviation = 0.0f; //Adjusts bounds of random number generation for the scale value
+	//Number of Grass per tile
+	UPROPERTY(EditAnywhere, Category = "Foliage|GrassGeneration", meta = (UIMin = 1, UIMax = 100, EditCondition = "bGenerateGrass"))
+	int GrassSpawnCount = 0;
 
-	UPROPERTY(EditAnywhere, Category = "MinorNoise", meta = (UIMin = 0))
-	int MinorNoiseStrength; //The influence of the PerlinNoise
+	//Max number of tries to generate a new grass location
+	UPROPERTY(EditAnywhere, Category = "Foliage|GrassGeneration", meta = (EditCondition = "bGenerateGrass"))
+	int GrassMaxTries = 100; 
 
-	UPROPERTY(EditAnywhere, Category = "MinorNoise")
-	FVector2D MinorNoiseOffset; //X and Y offset of the PerlinNoise
+	//How much grass to spawn each batch
+	UPROPERTY(EditAnywhere, Category = "Foliage|GrassGeneration", meta = (EditCondition = "bGenerateGrass"))
+	int GrassBatchSize = 50; 
 
-	UPROPERTY(EditAnywhere, Category = "MinorNoise")
-	FVector2D MinorNoiseScale;//X and Y scale of the PerlinNoise
+	//Grass types and their respective data for generation
+	UPROPERTY(EditAnywhere, Category = "Foliage|GrassGeneration", meta = (EditCondition = "bGenerateGrass"))
+	TArray<class UFoliageDataAsset*> GrassData; 
 
-	UPROPERTY(EditAnywhere, Category = "MinorNoise|Randomness")
-	float MinorNoiseStrengthDeviation = 0.0f; //Adjusts bounds of random number generation for the strength value
+	//Number of bushes per tile
+	UPROPERTY(EditAnywhere, Category = "Foliage|BushGeneration", meta = (UIMin = 1, UIMax = 100, EditCondition = "bGenerateBushes"))
+	int BushSpawnCount = 0;
 
-	UPROPERTY(EditAnywhere, Category = "MinorNoise|Randomness")
-	float MinorNoiseOffsetDeviation = 0.0f; //Adjusts bounds of random number generation for the offset value
+	//Max number of tries to generate a new bush location
+	UPROPERTY(EditAnywhere, Category = "Foliage|BushGeneration", meta = (EditCondition = "bGenerateBushes"))
+	int BushMaxTries = 100; 
 
-	UPROPERTY(EditAnywhere, Category = "MinorNoise|Randomness")
-	float MinorNoiseScaleDeviation = 0.0f; //Adjusts bounds of random number generation for the scale value
+	//How many bushes to spawn each batch
+	UPROPERTY(EditAnywhere, Category = "Foliage|BushGeneration", meta = (EditCondition = "bGenerateBushes"))
+	int BushBatchSize = 50;
 
-	UPROPERTY(EditAnywhere, Category = "General")
-	UMaterialInterface* LandscapeMaterial; //Material that will be applied to every tile
+	//Bush types and their respective data for generation
+	UPROPERTY(EditAnywhere, Category = "Foliage|BushGeneration", meta = (EditCondition = "bGenerateBushes"))
+	TArray<class UFoliageDataAsset*> BushData; 
 
-	UPROPERTY(EditAnywhere, meta = (UIMin = 1, UIMax = 100), Category = "TreeGeneration")
-	int TreeSpawnCount = 0;//Number of trees per tile
+	//Number of branches per tile
+	UPROPERTY(EditAnywhere, Category = "Foliage|BranchGeneration", meta = (UIMin = 1, UIMax = 100, EditCondition = "bGenerateBranches"))
+	int BranchSpawnCount = 0;
 
-	UPROPERTY(EditAnywhere, Category = "TreeGeneration")
-	int TreeMaxTries = 100; //Maximum number of tries to generate a new location
+	//Maximum number of tries to generate a new branch location
+	UPROPERTY(EditAnywhere, Category = "Foliage|BranchGeneration", meta = (EditCondition = "bGenerateBranches"))
+	int BranchMaxTries = 100; 
 
-	UPROPERTY(EditAnywhere, Category = "TreeGeneration")
-	int TreeMaxSpawnPerTick = 50;
+	//How many branches to spawn each batch
+	UPROPERTY(EditAnywhere, Category = "Foliage|BranchGeneration", meta = (EditCondition = "bGenerateBranches"))
+	int BranchBatchSize = 50;
 
-	UPROPERTY(EditAnywhere, Category = "TreeGeneration")
-	TArray<class UFoliageDataAsset*> TreeData; //Trees and their respective data for generation
-
-	UPROPERTY(EditAnywhere, Category = "TreeGeneration")
-	bool bDrawTreeDebug = false;//Number of trees per tile
-
-	UPROPERTY(EditAnywhere, meta = (UIMin = 1, UIMax = 100), Category = "GrassGeneration")
-	int GrassSpawnCount = 0;//Number of Grass per tile
-
-	UPROPERTY(EditAnywhere, Category = "GrassGeneration")
-	int GrassMaxTries = 100; //Maximum number of tries to generate a new location
-
-	UPROPERTY(EditAnywhere, Category = "GrassGeneration")
-	int GrassMaxSpawnPerTick = 50; 
-
-	UPROPERTY(EditAnywhere, Category = "GrassGeneration")
-	TArray<class UFoliageDataAsset*> GrassData; //Grass types and their respective data for generation
-
-	UPROPERTY(EditAnywhere, meta = (UIMin = 1, UIMax = 100), Category = "BushGeneration")
-	int BushSpawnCount = 0;//Number of Grass per tile
-
-	UPROPERTY(EditAnywhere, Category = "BushGeneration")
-	int BushMaxTries = 100; //Maximum number of tries to generate a new location
-
-	UPROPERTY(EditAnywhere, Category = "BushGeneration")
-	int BushMaxSpawnPerTick = 50;
-
-	UPROPERTY(EditAnywhere, Category = "BushGeneration")
-	TArray<class UFoliageDataAsset*> BushData; //Grass types and their respective data for generation
-
-	UPROPERTY(EditAnywhere, meta = (UIMin = 1, UIMax = 100), Category = "BranchGeneration")
-	int BranchSpawnCount = 0;//Number of Grass per tile
-
-	UPROPERTY(EditAnywhere, Category = "BranchGeneration")
-	int BranchMaxTries = 100; //Maximum number of tries to generate a new location
-
-	UPROPERTY(EditAnywhere, Category = "BranchGeneration")
-	int BranchMaxSpawnPerTick = 50;
-
-	UPROPERTY(EditAnywhere, Category = "BranchGeneration")
-	TArray<class UFoliageDataAsset*> BranchData; //Grass types and their respective data for generation
+	//Branch types and their respective data for generation
+	UPROPERTY(EditAnywhere, Category = "Foliage|BranchGeneration", meta = (EditCondition = "bGenerateBranches"))
+	TArray<class UFoliageDataAsset*> BranchData; 
 
 	/**
 	 * Initializes tiles for the specified drawing distance
@@ -168,15 +217,18 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
-
+	//Current tile where the player is located
 	UPROPERTY(EditAnywhere)
 	FTileIndex CenterTileIndex;
 
+	//Can a new foliage thread be started
 	UPROPERTY()
 	bool bIsFoliageThreadFinished = true;
 
-	TMap<FTileIndex, AProceduralTile*> Tiles; //A tiles that currently exist
+	//All tiles that currently exist
+	TMap<FTileIndex, AProceduralTile*> Tiles; 
 
+	//Parameters that are needed for the generation of atile
 	FTileGenerationParams TileGenerationParams;
 
 	/**
@@ -192,17 +244,24 @@ private:
 	 */
 	FTileGenerationParams SetupTileGenerationParams();
 
+	//Threads that create locations for a specific foliage component
 	TQueue<FFoliageGenerationThread*> FoliageGenerationThreads;
 
+	//Currently running thread
 	class FRunnableThread* RunningThread;
 
+	//Current thread that generates new foliage instances
 	class FFoliageGenerationThread* CurrentFoliageThread;
 
+	//The FoliageInfos of the previous foliage generation
 	TArray<struct FGeneratedFoliageInfo> LastGeneratedFoliageInfos;
 
+	//Components for which the creation of new instances is already finished
 	TArray<UFoliageGenerationComponent*> FoliageComponentsToUpdate;
 
+	//TileIndex of the previous foliage component
 	struct FTileIndex LastTileIndex;
 
+	//Time passed since last update
 	float CurrentUpdateTime = 0.f;
 };

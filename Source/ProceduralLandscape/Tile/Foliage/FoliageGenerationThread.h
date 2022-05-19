@@ -42,14 +42,24 @@ public:
 
 
 private:
+	//Pointer to the tile generator that initialized this thread
 	class ATileGenerator* TileGenerator;
 
+	//FoliageGenerationComponent that is associated with this thread
 	UFoliageGenerationComponent* FoliageGenerationComponent;
 
-
+	//Index of the tile to generate foliage for
 	FTileIndex TileIndex;
+
+	//The size of the tile
 	int TileSize;
+
+	//Start location of the trace to located the Z position on a tile 
 	float TraceZStart;
+
+	//End location of the trace to located the Z position on a tile 
 	float TraceZEnd;
+
+	//The information about the foliage associated with this tile 
 	TArray<FGeneratedFoliageInfo> FoliageInfos;
 };

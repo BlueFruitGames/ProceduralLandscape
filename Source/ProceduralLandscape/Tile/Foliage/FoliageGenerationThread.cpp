@@ -24,7 +24,6 @@ bool FFoliageGenerationThread::Init()
 
 uint32 FFoliageGenerationThread::Run()
 {
-
 	FoliageGenerationComponent->GenerateFoliage(false, TileIndex, TileSize, TraceZStart, TraceZEnd, FoliageInfos);
 	TileGenerator->bIsFoliageThreadFinished = true;
 	return 0;

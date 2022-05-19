@@ -15,22 +15,40 @@ class PROCEDURALLANDSCAPE_API UFoliageDataAsset : public UDataAsset
 	GENERATED_BODY()
 	
 public:
+	// The mesh of this foliage type
 	UPROPERTY(EditAnywhere)
 	UStaticMesh* FoliageMesh;
 
+	//Determines size of other foliage instances in the radius of this foliage type
 	UPROPERTY(EditAnywhere)
 	UCurveFloat* GrowthCurve;
 
+	//Is this foliage type a tree?
 	UPROPERTY(EditAnywhere)
 	bool bIsTree;
 
+	//The radius of this foliage type
 	UPROPERTY(EditAnywhere)
 	float Radius;
 
+	//Should uniform scaling be applied?
 	UPROPERTY(EditAnywhere)
-	float Scale = 1;
+	bool bUniformScale;	
 
-	UPROPERTY(EditAnywhere)
-	float ScaleRandomDiviation;
+	//Uniform scale value
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bUniformScale"))
+	float ScaleUniform;
+
+	//Random diviation of the scale
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bUniformScale"))
+	float ScaleRandomDiviationUniform;
+
+	//Scale of this foliage type
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "!bUniformScale"))
+	FVector Scale;
+
+	//Random diviation in each dimension
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "!bUniformScale"))
+	FVector ScaleRandomDiviation;
 
 };

@@ -122,39 +122,49 @@ public:
 	}
 
 private:
+	//Component to procedurally create a tile
 	UPROPERTY(VisibleAnywhere)
-	class UProceduralMeshComponent* ProceduralMeshComponent; //component to procedurally create a tile
+	class UProceduralMeshComponent* ProceduralMeshComponent; 
 
+	//Trigger to detect relocation of the player
 	UPROPERTY(VisibleAnywhere)
-	class UBoxComponent* BoxComponent; //trigger to detect relocation of the player
+	class UBoxComponent* BoxComponent;
 
+	//Component for generating trees
 	UPROPERTY(VisibleAnywhere)
-	class UFoliageGenerationComponent* TreeGenerationComponent; //component for generating trees
+	class UFoliageGenerationComponent* TreeGenerationComponent; 
 
+	//Component for generating grass
 	UPROPERTY(VisibleAnywhere)
-	class UFoliageGenerationComponent* GrassGenerationComponent; //component for generating trees
+	class UFoliageGenerationComponent* GrassGenerationComponent; 
 
+	//Component for generating bushes
 	UPROPERTY(VisibleAnywhere)
-	class UFoliageGenerationComponent* BushGenerationComponent; //component for generating trees
+	class UFoliageGenerationComponent* BushGenerationComponent; 
 
+	//Component for generating branches
 	UPROPERTY(VisibleAnywhere)
-	class UFoliageGenerationComponent* BranchGenerationComponent; //component for generating trees
+	class UFoliageGenerationComponent* BranchGenerationComponent; 
 
-
+	//Class that is used by the player actor
 	UPROPERTY()
-	TSubclassOf<class ACharacter> PlayerClass; //Class that is used to activate the trigger
+	TSubclassOf<class ACharacter> PlayerClass;
 
+	//Pointer to the tile generator
 	UPROPERTY()
-	class ATileGenerator* TileGenerator; //pointer to the tile generator
+	class ATileGenerator* TileGenerator; 
 
+	//Index of this tile
 	UPROPERTY()
-	FTileIndex TileIndex; //current index of this tile
+	FTileIndex TileIndex;
 
+	//Highest value for any vertex on the Z-axis
 	UPROPERTY()
-	float MaxZPosition; //highest value for any vertex on the Z-axis
+	float MaxZPosition;
 
+	//Smallest value for any vertex on the Z-axis
 	UPROPERTY()
-	float MinZPosition; //smallest value for any vertex on the Z-axis
+	float MinZPosition;
 
 
 	/**
