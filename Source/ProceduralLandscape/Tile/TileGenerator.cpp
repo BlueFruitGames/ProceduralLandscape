@@ -15,22 +15,7 @@ ATileGenerator::ATileGenerator()
 
 void ATileGenerator::OnConstruction(const FTransform& Transform) {
 	if (bReloadInEditor) {
-		GenerateTiles();
-	}
-}
-
-void ATileGenerator::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	Super::EndPlay(EndPlayReason);
-	if (CurrentFoliageThread && RunningThread) {
-		RunningThread->Kill(true);
-		RunningThread->WaitForCompletion();
-		delete CurrentFoliageThread;
-	}
-	
-	FFoliageGenerationThread* CurrentThread;
-	while (FoliageGenerationThreads.Dequeue(CurrentThread)) {
-		delete CurrentThread;
+		InitializeTiles();
 	}
 }
 
@@ -41,45 +26,48 @@ void ATileGenerator::BeginPlay()
 	LastGeneratedFoliageInfos = TArray<FGeneratedFoliageInfo>();
 	CenterTileIndex.X = 0;
 	CenterTileIndex.Y = 0;
-	GenerateTiles();
+	InitializeTiles();
 }
 
 void ATileGenerator::Tick(float DeltaSeconds)
 {
 	CurrentUpdateTime += DeltaSeconds;
-
-	if (CurrentUpdateTime >= FoliageUpdateCooldown && FoliageComponentsToUpdate.Num() > 0) {
-		UFoliageGenerationComponent* CurrentFoliageComponent = FoliageComponentsToUpdate[0];
-		if (FoliageComponentsToUpdate[0]->UpdateFoliage()) {
-			FoliageComponentsToUpdate[0]->SetVisibility(true, true);
-			FoliageComponentsToUpdate.RemoveAt(0);
-		}
-		CurrentUpdateTime = 0;
-	}
+	SpawnNewFoliage();
+	DeleteSingleTile();
 
 	if (!bIsFoliageThreadFinished) return;
+	InitializeFoliageThread();
+}
 
-	if (RunningThread && CurrentFoliageThread) {
-		UFoliageGenerationComponent* CurrentFoliageGenerationComponent = CurrentFoliageThread->GetFoliageGenerationComponent();
-		LastTileIndex = CurrentFoliageThread->GetTileIndex();
-		LastGeneratedFoliageInfos =	CurrentFoliageThread->GetFoliageInfos();
-		if (FoliageComponentsToUpdate.Find(CurrentFoliageGenerationComponent) < 0) {
-			FoliageComponentsToUpdate.Add(CurrentFoliageGenerationComponent);
-		}
+void ATileGenerator::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+	if (CurrentFoliageThread && RunningThread) {
+		RunningThread->Kill(true);
+		RunningThread->WaitForCompletion();
 		delete CurrentFoliageThread;
-		RunningThread = nullptr;
 	}
-	else if (FoliageGenerationThreads.Dequeue(CurrentFoliageThread)) {	
-		if (LastTileIndex == CurrentFoliageThread->GetTileIndex()) {
-			CurrentFoliageThread->SetFoliageInfos(LastGeneratedFoliageInfos);
-		}
-		else {
-			CurrentFoliageThread->SetFoliageInfos(TArray<FGeneratedFoliageInfo>());
-		}
-		bIsFoliageThreadFinished = false;
-		CurrentFoliageThread->GetFoliageGenerationComponent()->SetVisibility(false, true);
-		RunningThread = FRunnableThread::Create(CurrentFoliageThread, TEXT("FoliageGeneration"));
+
+	FFoliageGenerationThread* CurrentThread;
+	while (FoliageGenerationThreads.IsValidIndex(0)) {
+		CurrentThread = FoliageGenerationThreads[0];
+		FoliageGenerationThreads.RemoveAt(0);
+		delete CurrentThread;
 	}
+}
+
+void ATileGenerator::InitializeTiles()
+{
+	DeleteAllTiles();
+	SetupTileGenerationParams();
+	for (int Row = CenterTileIndex.X - DrawDistance; Row <= CenterTileIndex.X + DrawDistance; ++Row) {
+		for (int Column = CenterTileIndex.Y - DrawDistance; Column <= CenterTileIndex.Y + DrawDistance; ++Column) {
+			FTileIndex CurrentTileIndex(Row, Column);
+			AProceduralTile* CurrentTile = GenerateTile(CurrentTileIndex);
+			GenerateFoliage(CurrentTileIndex, CurrentTile);
+		}
+	}
+	
 }
 
 FTileGenerationParams ATileGenerator::SetupTileGenerationParams()
@@ -107,110 +95,80 @@ FTileGenerationParams ATileGenerator::SetupTileGenerationParams()
 	return TileGenerationParams;
 }
 
-void ATileGenerator::GenerateTiles()
+AProceduralTile* ATileGenerator::GenerateTile(FTileIndex CurrentTileIndex)
 {
-	DeleteAllTiles();
-	SetupTileGenerationParams();
+	TileGenerationParams.TileIndex = CurrentTileIndex;
+	FVector TileLocation(CurrentTileIndex.X * TileSize, CurrentTileIndex.Y * TileSize, 0);
+	FActorSpawnParameters SpawnParams;
+	AProceduralTile* CurrentTile = GetWorld()->SpawnActor<AProceduralTile>(TileLocation, GetActorRotation(), SpawnParams);
+	CurrentTile->Setup(this, PlayerClass, LandscapeMaterial, bGenerateTrees, bGenerateGrass, bGenerateBushes, bGenerateBranches);
+	CurrentTile->GenerateTile(TileGenerationParams);
+	FString TileName = FString::Printf(TEXT("TILE %d,%d"), CurrentTileIndex.X, CurrentTileIndex.Y);
+	CurrentTile->SetActorLabel(TileName);
+	return CurrentTile;
+}
 
-	for (int Row = CenterTileIndex.X - DrawDistance; Row <= CenterTileIndex.X + DrawDistance; ++Row) {
-		for (int Column = CenterTileIndex.Y - DrawDistance; Column <= CenterTileIndex.Y + DrawDistance; ++Column) {
-			FTileIndex CurrentTileIndex(Row, Column);
-			TileGenerationParams.TileIndex = CurrentTileIndex;
-			FVector TileLocation(CurrentTileIndex.X * TileSize, CurrentTileIndex.Y * TileSize, 0);
-			FActorSpawnParameters SpawnParams;
-			AProceduralTile* CurrentTile = GetWorld()->SpawnActor<AProceduralTile>(TileLocation, GetActorRotation(), SpawnParams);
-			CurrentTile->Setup(this, PlayerClass, LandscapeMaterial);
-			CurrentTile->GenerateTile(TileGenerationParams);
-			FString TileName = FString::Printf(TEXT("TILE %d,%d"), CurrentTileIndex.X, CurrentTileIndex.Y);
-			CurrentTile->SetActorLabel(TileName);
-
-			TArray <FGeneratedFoliageInfo> GeneratedFoliage;
-			
-			if (bGenerateTrees) {
-				CurrentTile->GetTreeGenerationComponent()->SetupFoliageGeneration(bUseCulling, FoliageCullDistance, TreeSpawnCount, TreeMaxTries, TreeBatchSize, TreeData, RandomSeed, true);
-				CurrentTile->GetTreeGenerationComponent()->GenerateFoliage(true, CurrentTileIndex, TileSize, CurrentTile->GetMaxZPosition(), CurrentTile->GetMinZPosition(), GeneratedFoliage);
-				
-			}
-
-			if (bGenerateBranches) {
-				CurrentTile->GetBranchGenerationComponent()->SetupFoliageGeneration(bUseCulling, FoliageCullDistance, BranchSpawnCount, BranchMaxTries, BranchBatchSize, BranchData, RandomSeed, false);
-				CurrentTile->GetBranchGenerationComponent()->GenerateFoliage(true, CurrentTileIndex, TileSize, CurrentTile->GetMaxZPosition(), CurrentTile->GetMinZPosition(), GeneratedFoliage);
-			}
-
-			if (bGenerateBushes) {
-				CurrentTile->GetBushGenerationComponent()->SetupFoliageGeneration(bUseCulling, FoliageCullDistance, BushSpawnCount, BushMaxTries, BushBatchSize, BushData, RandomSeed, false);
-				CurrentTile->GetBushGenerationComponent()->GenerateFoliage(true, CurrentTileIndex, TileSize, CurrentTile->GetMaxZPosition(), CurrentTile->GetMinZPosition(), GeneratedFoliage);
-			}
-
-			if (bGenerateGrass) {
-				CurrentTile->GetGrassGenerationComponent()->SetupFoliageGeneration(bUseCulling, FoliageCullDistance, GrassSpawnCount, GrassMaxTries, GrassBatchSize, GrassData, RandomSeed, false);
-				CurrentTile->GetGrassGenerationComponent()->GenerateFoliage(true, CurrentTileIndex, TileSize, CurrentTile->GetMaxZPosition(), CurrentTile->GetMinZPosition(), GeneratedFoliage);
-			}
-			Tiles.Add(CurrentTileIndex, CurrentTile);
-		}
+void ATileGenerator::GenerateFoliage(FTileIndex CurrentTileIndex, AProceduralTile* CurrentTile)
+{
+	TArray <FGeneratedFoliageInfo> GeneratedFoliage;
+	if (bGenerateTrees) {
+		CurrentTile->GetTreeGenerationComponent()->SetupFoliageGeneration(true, bUseCulling, FoliageCullDistance, TreeSpawnCount, TreeMaxTries, TreeBatchSize, TreeData, RandomSeed, true);
+		FFoliageGenerationThread* NewThread = new FFoliageGenerationThread(CurrentTile->GetTreeGenerationComponent(), this, CurrentTileIndex, TileSize, CurrentTile->GetMaxZPosition(), CurrentTile->GetMinZPosition());
+		FoliageGenerationThreads.Add(NewThread);
 	}
-	
+
+	if (bGenerateBranches) {
+		CurrentTile->GetBranchGenerationComponent()->SetupFoliageGeneration(true, bUseCulling, FoliageCullDistance, BranchSpawnCount, BranchMaxTries, BranchBatchSize, BranchData, RandomSeed, false);
+		FFoliageGenerationThread* NewThread = new FFoliageGenerationThread(CurrentTile->GetBranchGenerationComponent(), this, CurrentTileIndex, TileSize, CurrentTile->GetMaxZPosition(), CurrentTile->GetMinZPosition());
+		FoliageGenerationThreads.Add(NewThread);
+	}
+
+	if (bGenerateBushes) {
+		CurrentTile->GetBushGenerationComponent()->SetupFoliageGeneration(true, bUseCulling, FoliageCullDistance, BushSpawnCount, BushMaxTries, BushBatchSize, BushData, RandomSeed, false);
+		FFoliageGenerationThread* NewThread = new FFoliageGenerationThread(CurrentTile->GetBushGenerationComponent(), this, CurrentTileIndex, TileSize, CurrentTile->GetMaxZPosition(), CurrentTile->GetMinZPosition());
+		FoliageGenerationThreads.Add(NewThread);
+	}
+
+	if (bGenerateGrass) {
+		CurrentTile->GetGrassGenerationComponent()->SetupFoliageGeneration(false, bUseCulling, FoliageCullDistance, GrassSpawnCount, GrassMaxTries, GrassBatchSize, GrassData, RandomSeed, false);
+		FFoliageGenerationThread* NewThread = new FFoliageGenerationThread(CurrentTile->GetGrassGenerationComponent(), this, CurrentTileIndex, TileSize, CurrentTile->GetMaxZPosition(), CurrentTile->GetMinZPosition());
+		FoliageGenerationThreads.Add(NewThread);
+	}
+	Tiles.Add(CurrentTileIndex, CurrentTile);
 }
 
 void ATileGenerator::UpdateTiles(FTileIndex NewCenterIndex)
 {
-	FoliageGenerationThreads.Empty();
 	CenterTileIndex = NewCenterIndex;
-	TArray<FTileIndex> UpdateableTileIndices;
+	TArray<FTileIndex> TilesToRemove;
 	TArray<FTileIndex> IndicesToGenerate;
-	Tiles.GetKeys(UpdateableTileIndices);
+	Tiles.GetKeys(TilesToRemove);
 
 	for (int Row = CenterTileIndex.X - DrawDistance; Row <= CenterTileIndex.X + DrawDistance; ++Row) {
 		for (int Column = CenterTileIndex.Y - DrawDistance; Column <= CenterTileIndex.Y + DrawDistance; ++Column) {
 			FTileIndex CurrentTileIndex(Row, Column);
 			if (Tiles.Find(CurrentTileIndex)) {
-				UpdateableTileIndices.Remove(CurrentTileIndex);
+				TilesToRemove.Remove(CurrentTileIndex);
 			}
-			else {
-				IndicesToGenerate.Add(CurrentTileIndex);
+			else if(!Tiles.Find(CurrentTileIndex)) {
+				AProceduralTile* CurrentTile = GenerateTile(CurrentTileIndex);			
+				GenerateFoliage(CurrentTileIndex, CurrentTile);
 			}
 		}
 	}
-	for (FTileIndex& IndexToGenerate : IndicesToGenerate) {
-		FTileIndex IndexToUpdate = UpdateableTileIndices[0];
-		UpdateableTileIndices.RemoveAt(0);
-		TileGenerationParams.TileIndex = IndexToGenerate;
-		AProceduralTile* TileToUpdate = *Tiles.Find(IndexToUpdate);
-		FVector TileLocation(IndexToGenerate.X * TileSize, IndexToGenerate.Y * TileSize, 0);
-
-
-		TileToUpdate->GetTreeGenerationComponent()->ClearFoliage();
-		TileToUpdate->GetBranchGenerationComponent()->ClearFoliage();
-		TileToUpdate->GetBushGenerationComponent()->ClearFoliage();
-		TileToUpdate->GetGrassGenerationComponent()->ClearFoliage();
-
-		TileToUpdate->SetActorLocation(TileLocation);
-		TileToUpdate->GenerateTile(TileGenerationParams, true);
-
-		Tiles.Add(IndexToGenerate, TileToUpdate);
-		Tiles.Remove(IndexToUpdate);
-
-		TArray<FGeneratedFoliageInfo> GeneratedFoliageInfos;
-		if (bGenerateTrees) {
-			FFoliageGenerationThread* NewThread = new FFoliageGenerationThread(TileToUpdate->GetTreeGenerationComponent(), this, IndexToGenerate, TileSize, TileToUpdate->GetMaxZPosition(), TileToUpdate->GetMinZPosition());
-			FoliageGenerationThreads.Enqueue(NewThread);
+	for (FTileIndex& IndexToRemove : TilesToRemove) {
+		AProceduralTile* CurrentTile = *Tiles.Find(IndexToRemove);
+		int i = 0;
+		while (i < FoliageGenerationThreads.Num()) {
+			if (FoliageGenerationThreads[i]->GetTileIndex() == IndexToRemove) {
+				FoliageGenerationThreads.RemoveAt(i);
+				continue;
+			}
+			++i;
 		}
-
-		if (bGenerateBranches) {
-			FFoliageGenerationThread* NewThread = new FFoliageGenerationThread(TileToUpdate->GetBranchGenerationComponent(), this, IndexToGenerate, TileSize, TileToUpdate->GetMaxZPosition(), TileToUpdate->GetMinZPosition());
-			FoliageGenerationThreads.Enqueue(NewThread);
-		}
-
-		if (bGenerateBushes) {
-			FFoliageGenerationThread* NewThread = new FFoliageGenerationThread(TileToUpdate->GetBushGenerationComponent(), this, IndexToGenerate, TileSize, TileToUpdate->GetMaxZPosition(), TileToUpdate->GetMinZPosition());
-			FoliageGenerationThreads.Enqueue(NewThread);
-		}
-
-		if (bGenerateGrass) {
-			FFoliageGenerationThread* NewThread = new FFoliageGenerationThread(TileToUpdate->GetGrassGenerationComponent(), this, IndexToGenerate, TileSize, TileToUpdate->GetMaxZPosition(), TileToUpdate->GetMinZPosition());
-			FoliageGenerationThreads.Enqueue(NewThread);
-		}
-
+		CurrentTile->MarkToDelete();
+		TilesToDelete.Enqueue(CurrentTile);
+		Tiles.Remove(IndexToRemove);
 	}
 }
 
@@ -223,3 +181,54 @@ void ATileGenerator::DeleteAllTiles() {
 	Tiles.Empty();
 }
 
+void ATileGenerator::InitializeFoliageThread()
+{
+	if (RunningThread && CurrentFoliageThread) {
+		UFoliageGenerationComponent* CurrentFoliageGenerationComponent = CurrentFoliageThread->GetFoliageGenerationComponent();
+		LastTileIndex = CurrentFoliageThread->GetTileIndex();
+		LastGeneratedFoliageInfos = CurrentFoliageThread->GetFoliageInfos();
+		if (FoliageComponentsToUpdate.Find(CurrentFoliageGenerationComponent) < 0) {
+			FoliageComponentsToUpdate.Add(CurrentFoliageGenerationComponent);
+		}
+		delete CurrentFoliageThread;
+		RunningThread = nullptr;
+	}
+	else if (FoliageGenerationThreads.IsValidIndex(0)) {
+		CurrentFoliageThread = FoliageGenerationThreads[0];
+		FoliageGenerationThreads.RemoveAt(0);
+		if (LastTileIndex == CurrentFoliageThread->GetTileIndex()) {
+			CurrentFoliageThread->SetFoliageInfos(LastGeneratedFoliageInfos);
+		}
+		else {
+			CurrentFoliageThread->SetFoliageInfos(TArray<FGeneratedFoliageInfo>());
+		}
+		bIsFoliageThreadFinished = false;
+		CurrentFoliageThread->GetFoliageGenerationComponent()->SetVisibility(false, true);
+		RunningThread = FRunnableThread::Create(CurrentFoliageThread, TEXT("FoliageGeneration"));
+	}
+}
+
+void ATileGenerator::SpawnNewFoliage()
+{
+	if (CurrentUpdateTime >= FoliageUpdateCooldown && FoliageComponentsToUpdate.Num() > 0) {
+		UFoliageGenerationComponent* CurrentFoliageComponent = FoliageComponentsToUpdate[0];
+		if (FoliageComponentsToUpdate[0]->UpdateFoliage()) {
+			FoliageComponentsToUpdate[0]->SetVisibility(true, true);
+			FoliageComponentsToUpdate.RemoveAt(0);
+		}
+		CurrentUpdateTime = 0;
+	}
+}
+
+void ATileGenerator::DeleteSingleTile()
+{
+	AProceduralTile* TileToDelete;
+	if (TilesToDelete.Dequeue(TileToDelete)) {
+		if (TileToDelete->IsGenerationFinished() && !Tiles.Find(TileToDelete->GetTileIndex())) {
+			TileToDelete->Destroy();
+		}
+		else {
+			TilesToDelete.Enqueue(TileToDelete);
+		}
+	}
+}

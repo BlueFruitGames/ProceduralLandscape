@@ -197,7 +197,7 @@ public:
 	 *
 	 */
 	UFUNCTION(CallInEditor)
-	void GenerateTiles();
+	void InitializeTiles();
 
 	/**
 	 * Is called to update the tiles of the landscape
@@ -231,21 +231,10 @@ private:
 	//Parameters that are needed for the generation of atile
 	FTileGenerationParams TileGenerationParams;
 
-	/**
-	 * .
-	 * Delets all tiles in the Tiles-Map
-	 */
-	void DeleteAllTiles();
-
-	/**
-	 * Sets up the parameters needed for the tile generation.
-	 * 
-	 * \return the parameters that will be used for the tile generation
-	 */
-	FTileGenerationParams SetupTileGenerationParams();
-
 	//Threads that create locations for a specific foliage component
-	TQueue<FFoliageGenerationThread*> FoliageGenerationThreads;
+	TArray<FFoliageGenerationThread*> FoliageGenerationThreads;
+
+	TQueue<AProceduralTile*> TilesToDelete;
 
 	//Currently running thread
 	class FRunnableThread* RunningThread;
@@ -264,4 +253,27 @@ private:
 
 	//Time passed since last update
 	float CurrentUpdateTime = 0.f;
+
+	/**
+	 * Delets all tiles in the Tiles-Map
+	 */
+	void DeleteAllTiles();
+
+	/**
+	 * Sets up the parameters needed for the tile generation.
+	 *
+	 * \return the parameters that will be used for the tile generation
+	 */
+	FTileGenerationParams SetupTileGenerationParams();
+
+	void SpawnNewFoliage();
+
+	void InitializeFoliageThread();
+
+	void DeleteSingleTile();
+
+	void GenerateFoliage(FTileIndex CurrentTileIndex, AProceduralTile* CurrentTile);
+
+	AProceduralTile* GenerateTile(FTileIndex CurrentTileIndex);
+
 };

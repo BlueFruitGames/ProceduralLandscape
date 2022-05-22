@@ -15,32 +15,26 @@ AProceduralTile::AProceduralTile()
 {
 	ProceduralMeshComponent = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("PorceduralMeshComponent"));
 	ProceduralMeshComponent->SetCollisionProfileName("BlockAll");
+	ProceduralMeshComponent->bAffectDistanceFieldLighting = true;
+	ProceduralMeshComponent->bAffectDynamicIndirectLighting = true;
 	ProceduralMeshComponent->SetCollisionResponseToChannel(COLLISION_GROUND, ECollisionResponse::ECR_Block);
 	SetRootComponent(ProceduralMeshComponent);
+	ProceduralMeshComponent->SetMobility(EComponentMobility::Static);
 
 	BoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxComponent"));
 	BoxComponent->SetupAttachment(RootComponent);
-
-	TreeGenerationComponent = CreateDefaultSubobject<UFoliageGenerationComponent>(TEXT("TreeGenerationComponent"));
-	TreeGenerationComponent->SetupAttachment(RootComponent);
-
-	GrassGenerationComponent = CreateDefaultSubobject<UFoliageGenerationComponent>(TEXT("GrassGenerationComponent"));
-	GrassGenerationComponent->SetupAttachment(RootComponent);
-
-	BushGenerationComponent = CreateDefaultSubobject<UFoliageGenerationComponent>(TEXT("BushGenerationComponent"));
-	BushGenerationComponent->SetupAttachment(RootComponent);
-
-	BranchGenerationComponent = CreateDefaultSubobject<UFoliageGenerationComponent>(TEXT("BranchGenerationComponent"));
-	BranchGenerationComponent->SetupAttachment(RootComponent);
-
+	BoxComponent->SetMobility(EComponentMobility::Static);
 }
 
-void AProceduralTile::Setup(ATileGenerator* Tilegenerator_In, TSubclassOf<ACharacter> PlayerClass_In, UMaterialInterface* Material)
+
+
+void AProceduralTile::Setup(ATileGenerator* Tilegenerator_In, TSubclassOf<ACharacter> PlayerClass_In, UMaterialInterface* Material, bool bGenerateTrees, bool bGenerateGrass, bool bGenerateBushes, bool bGenerateBranches)
 {	
 	TileGenerator = Tilegenerator_In;
 	PlayerClass = PlayerClass_In.Get();
 	if (ProceduralMeshComponent) ProceduralMeshComponent->SetMaterial(0, Material);
 	if(BoxComponent) BoxComponent->OnComponentBeginOverlap.AddDynamic(this, &AProceduralTile::OnBeginOverlap);
+	SetupFoliageComponents(bGenerateTrees, bGenerateGrass, bGenerateBushes, bGenerateBranches);
 }
 
 
@@ -76,6 +70,30 @@ void AProceduralTile::GenerateTile(FTileGenerationParams TileGenerationParams, b
 			ProceduralMeshComponent->CreateMeshSection(0, Vertices, Triangles, Normals, UV0, VertexColor, TArray<FProcMeshTangent>(), true);
 			ProceduralMeshComponent->AddCollisionConvexMesh(Vertices);
 		}
+	}
+}
+
+void AProceduralTile::SetupFoliageComponents(bool bGenerateTrees, bool bGenerateGrass, bool bGenerateBushes, bool bGenerateBranches)
+{
+	if (bGenerateTrees) {
+		TreeGenerationComponent = NewObject<UFoliageGenerationComponent>(this, TEXT("TreeGenerationComponent"));
+		TreeGenerationComponent->SetMobility(EComponentMobility::Static);
+		TreeGenerationComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+	}
+	if (bGenerateGrass) {
+		GrassGenerationComponent = NewObject<UFoliageGenerationComponent>(this, TEXT("GrassGenerationComponent"));
+		GrassGenerationComponent->SetMobility(EComponentMobility::Static);
+		GrassGenerationComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+	}
+	if (bGenerateBushes) {
+		BushGenerationComponent = NewObject<UFoliageGenerationComponent>(this, TEXT("BushGenerationComponent"));
+		BushGenerationComponent->SetMobility(EComponentMobility::Static);
+		BushGenerationComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+	}
+	if (bGenerateBranches) {
+		BranchGenerationComponent = NewObject<UFoliageGenerationComponent>(this, TEXT("BranchGenerationComponent"));
+		BranchGenerationComponent->SetMobility(EComponentMobility::Static);
+		BranchGenerationComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 	}
 }
 
@@ -203,6 +221,17 @@ float AProceduralTile::GetZOffset(float XPos, float YPos, FVector2D NoiseScale, 
 
 float AProceduralTile::MapToUV(float Value, int TileSize) {
 	return (Value + (float(TileSize) / 2)) / TileSize;
+}
+
+bool AProceduralTile::IsGenerationFinished()
+{
+	if (bMarkedToDelete) return true;
+	bool bIsFinished = true;
+	if (TreeGenerationComponent) bIsFinished &= TreeGenerationComponent->GetIsGenerationFinished();
+	if (GrassGenerationComponent) bIsFinished &= GrassGenerationComponent->GetIsGenerationFinished();
+	if (BushGenerationComponent) bIsFinished &= BushGenerationComponent->GetIsGenerationFinished();
+	if (BranchGenerationComponent) bIsFinished &= BranchGenerationComponent->GetIsGenerationFinished();
+	return bIsFinished;
 }
 
 float AProceduralTile::MapToRange(float Value, float MinPrev, float MaxPrev, float MinNew, float MaxNew) {

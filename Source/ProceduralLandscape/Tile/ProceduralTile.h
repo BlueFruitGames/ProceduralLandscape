@@ -92,10 +92,12 @@ public:
 	void OnBeginOverlap (UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	
 	//Sets up proberties which aren't changing at runtime
-	void Setup(class ATileGenerator* Tilegenerator_In, TSubclassOf<class ACharacter> PlayerClass_In, UMaterialInterface* Material);
+	void Setup(class ATileGenerator* Tilegenerator_In, TSubclassOf<class ACharacter> PlayerClass_In, UMaterialInterface* Material, bool bGenerateTrees = false, bool bGenerateGrass = false, bool bGenerateBushes = false, bool bGenerateBranches = false);
 	
 	//Procedurally generates a tile using ProceduralMeshComponent
 	void GenerateTile(FTileGenerationParams TileGenerationParams, bool bIsUpdate = false);
+
+	bool IsGenerationFinished();
 
 	class UFoliageGenerationComponent* GetTreeGenerationComponent() {
 		return TreeGenerationComponent;
@@ -113,12 +115,20 @@ public:
 		return BranchGenerationComponent;
 	}
 
+	FTileIndex GetTileIndex() {
+		return TileIndex;
+	}
+
 	float GetMaxZPosition(){
 		return MaxZPosition;
 	}
 
 	float GetMinZPosition() {
 		return MinZPosition;
+	}
+
+	void MarkToDelete() {
+		bMarkedToDelete = true;
 	}
 
 private:
@@ -166,6 +176,10 @@ private:
 	UPROPERTY()
 	float MinZPosition;
 
+	UPROPERTY()
+	bool bMarkedToDelete;
+
+	void SetupFoliageComponents(bool bGenerateTrees, bool bGenerateGrass, bool bGenerateBushes, bool bGenerateBranches);
 
 	/**
 	 * Generates the triangles for the vertex at postion CurrentRow, CurrentColumn

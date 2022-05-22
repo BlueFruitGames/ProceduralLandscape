@@ -17,7 +17,7 @@ UFoliageGenerationComponent::UFoliageGenerationComponent()
 	
 }
 
-void UFoliageGenerationComponent::SetupFoliageGeneration(bool bUseCulling, float CullDistance, int SpawnCount_In, int MaxTries_In, int BatchSize_In, TArray<UFoliageDataAsset*> FoliageData_In, int RandomSeed_In, bool bCollisionEnabled)
+void UFoliageGenerationComponent::SetupFoliageGeneration(bool bAffectsLight, bool bUseCulling, float CullDistance, int SpawnCount_In, int MaxTries_In, int BatchSize_In, TArray<UFoliageDataAsset*> FoliageData_In, int RandomSeed_In, bool bCollisionEnabled)
 {
 	SpawnCount = SpawnCount_In;
 	MaxTries = MaxTries_In;
@@ -35,8 +35,12 @@ void UFoliageGenerationComponent::SetupFoliageGeneration(bool bUseCulling, float
 		if (bUseCulling) {
 			CurrentHISMComponent->SetCullDistances(0, CullDistance);
 		}
-		if (!bCollisionEnabled) {
+		if (!bAffectsLight) {
+			CurrentHISMComponent->bAffectDynamicIndirectLighting = false;
+			CurrentHISMComponent->bAffectDistanceFieldLighting = false;
 			CurrentHISMComponent->SetCastShadow(false);
+		}
+		if (!bCollisionEnabled) {
 			CurrentHISMComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		}
 		CurrentHISMComponent->RegisterComponent();
@@ -118,7 +122,6 @@ void UFoliageGenerationComponent::GenerateFoliage(bool bSpawnDirect, FTileIndex 
 			Count += 1;
 		}
 	}
-
 	Lock.Unlock();
 }
 
@@ -155,6 +158,7 @@ bool UFoliageGenerationComponent::UpdateFoliage()
 	else {
 		bSuccess = false;
 	}
+	bIsGenerationFinished = bSuccess;
 	return bSuccess;
 }
 

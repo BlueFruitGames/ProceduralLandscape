@@ -32,6 +32,7 @@ public:
 	/**
 	 * Sets up the membervariables and creates the HISMComponents
 	 *
+	 * \param bAffectsLight If the lighting is affected by this foliage type
 	 * \param bUseCulling If culling should be applied to the HISM components
 	 * \param CullDistance the end point distance for culling
 	 * \param SpawnCount_In The max amount of foliage to be spawned
@@ -41,7 +42,7 @@ public:
 	 * \param RandomSeed_In The random seed of the current landscape
 	 * \param bCollisionEnabled If collision should be applied to the foliage instances
 	 */
-	void SetupFoliageGeneration(bool bUseCulling, float CullDistance, int SpawnCount_In, int MaxTries_In, int BatchSize_In, TArray<class UFoliageDataAsset*> FoliageData_In, int RandomSeed_In, bool bCollisionEnabled);
+	void SetupFoliageGeneration(bool bAffectsLight, bool bUseCulling, float CullDistance, int SpawnCount_In, int MaxTries_In, int BatchSize_In, TArray<class UFoliageDataAsset*> FoliageData_In, int RandomSeed_In, bool bCollisionEnabled);
 
 	/**
 	 * Generates randomly placed foliage locations or spawns them directly
@@ -68,6 +69,10 @@ public:
 	 * \return ture if all instances were spawned, false otherwise
 	 */
 	bool UpdateFoliage();
+
+	bool GetIsGenerationFinished() {
+		return bIsGenerationFinished;
+	}
 
 private:
 	/**
@@ -125,5 +130,7 @@ private:
 
 	//The indices for each HISM component for the following batch
 	TArray<int> NextSpawnIndices;
+
+	bool bIsGenerationFinished = false;
 		
 };
