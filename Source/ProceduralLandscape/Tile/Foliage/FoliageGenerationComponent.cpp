@@ -4,7 +4,6 @@
 #include "FoliageGenerationComponent.h"
 
 #include "FoliageDataAsset.h"
-#include "../ProceduralTile.h"
 
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 
@@ -17,29 +16,30 @@ UFoliageGenerationComponent::UFoliageGenerationComponent()
 	
 }
 
-void UFoliageGenerationComponent::SetupFoliageGeneration(bool bAffectsLight, bool bUseCulling, float CullDistance, int SpawnCount_In, int MaxTries_In, int BatchSize_In, TArray<UFoliageDataAsset*> FoliageData_In, int RandomSeed_In, bool bCollisionEnabled)
+void UFoliageGenerationComponent::SetupFoliageGeneration(FTileIndex TileIndex_In, TArray<class UFoliageDataAsset*> FoliageData_In, int SpawnCount_In, int MaxTries_In, int BatchSize_In, int RandomSeed_In, bool bAffectsLight, bool bUseCulling, float CullDistance, bool bCollisionEnabled)
 {
+	TileIndex = TileIndex_In;
+	FoliageData = FoliageData_In;
 	SpawnCount = SpawnCount_In;
-	MaxTries = MaxTries_In;
 	MaxTries = MaxTries_In;
 	BatchSize = BatchSize_In;
 	RandomSeed = RandomSeed_In;
-	FoliageData = FoliageData_In;
 	for (UFoliageDataAsset* FoliageDatum : FoliageData) {
 		if (!FoliageDatum || !FoliageDatum->FoliageMesh) continue;
 		FString CurrentComponentName = FString::Printf(TEXT("HISMComponent_%s"), *FoliageDatum->FoliageMesh->GetName());
 		UHierarchicalInstancedStaticMeshComponent* CurrentHISMComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(this, UHierarchicalInstancedStaticMeshComponent::StaticClass(), FName(CurrentComponentName));
 		CurrentHISMComponent->SetWorldLocation(FVector(0, 0, 0));
 		CurrentHISMComponent->AttachToComponent(this, FAttachmentTransformRules::KeepWorldTransform);
-		CurrentHISMComponent->SetStaticMesh(FoliageDatum->FoliageMesh);
-		if (bUseCulling) {
-			CurrentHISMComponent->SetCullDistances(0, CullDistance);
-		}
+		CurrentHISMComponent->SetStaticMesh(FoliageDatum->FoliageMesh); 
 		if (!bAffectsLight) {
 			CurrentHISMComponent->bAffectDynamicIndirectLighting = false;
 			CurrentHISMComponent->bAffectDistanceFieldLighting = false;
 			CurrentHISMComponent->SetCastShadow(false);
 		}
+		if (bUseCulling) {
+			CurrentHISMComponent->SetCullDistances(0, CullDistance);
+		}
+		
 		if (!bCollisionEnabled) {
 			CurrentHISMComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		}
@@ -48,7 +48,7 @@ void UFoliageGenerationComponent::SetupFoliageGeneration(bool bAffectsLight, boo
 	}
 }
 
-void UFoliageGenerationComponent::GenerateFoliage(bool bSpawnDirect, FTileIndex TileIndex, int TileSize, float TraceZStart, float TraceZEnd, TArray<FGeneratedFoliageInfo>& FoliageInfos, bool bDrawDebug)
+void UFoliageGenerationComponent::GenerateFoliage(TArray<FGeneratedFoliageInfo>& FoliageInfos, bool bSpawnDirect, int TileSize, float TraceZStart, float TraceZEnd, bool bDrawDebug)
 {
 	Lock.Lock();
 	InstancesToSpawn.Empty();
@@ -60,7 +60,7 @@ void UFoliageGenerationComponent::GenerateFoliage(bool bSpawnDirect, FTileIndex 
 
 	if (HISMComponents.Num() == 0) return;
 	FRandomStream RandomStream((TileIndex.X * 10000 + TileIndex.Y) * RandomSeed + RandomSeed);
-	TArray<FTileBounds> TileBounds = InitializeBounds(TileIndex, TileSize);
+	TArray<FTileBounds> TileBounds = InitializeBounds(TileSize);
 	int Count = 0;
 	int Tries = 0;
 
@@ -136,7 +136,7 @@ bool UFoliageGenerationComponent::UpdateFoliage()
 {
 	bool bSuccess = true;
 	if (Lock.TryLock()) {
-		for (int i = 0; i < HISMComponents.Num(); ++i) {
+		for (int i = 0; i < InstancesToSpawn.Num(); ++i) {
 			if (InstancesToSpawn[i].Num() > 0) {
 				if (InstancesToSpawn[i].Num() <= BatchSize) {
 					HISMComponents[i]->AddInstances(InstancesToSpawn[i], false, true);
@@ -181,7 +181,7 @@ bool UFoliageGenerationComponent::DoesOverlap(FVector NewLocation, TArray<FGener
 	return bDoesOverlap;
 }
 
-TArray<FTileBounds> UFoliageGenerationComponent::InitializeBounds(FTileIndex TileIndex, int TileSize)
+TArray<FTileBounds> UFoliageGenerationComponent::InitializeBounds(int TileSize)
 {
 	TArray<FTileBounds> TileBounds;
 

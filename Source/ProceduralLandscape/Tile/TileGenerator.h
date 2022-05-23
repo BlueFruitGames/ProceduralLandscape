@@ -108,10 +108,6 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Foliage|General")
 	bool bGenerateBushes = false;
 
-	//If bushes should also generated
-	UPROPERTY(EditAnywhere, Category = "Foliage|General")
-	bool bGenerateBranches = false;
-
 	//Time until spawning a new foliage batch
 	UPROPERTY(EditAnywhere, Category = "Foliage|General")
 	float FoliageUpdateCooldown = 0.25;
@@ -176,22 +172,6 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Foliage|BushGeneration", meta = (EditCondition = "bGenerateBushes"))
 	TArray<class UFoliageDataAsset*> BushData; 
 
-	//Number of branches per tile
-	UPROPERTY(EditAnywhere, Category = "Foliage|BranchGeneration", meta = (UIMin = 1, UIMax = 100, EditCondition = "bGenerateBranches"))
-	int BranchSpawnCount = 0;
-
-	//Maximum number of tries to generate a new branch location
-	UPROPERTY(EditAnywhere, Category = "Foliage|BranchGeneration", meta = (EditCondition = "bGenerateBranches"))
-	int BranchMaxTries = 100; 
-
-	//How many branches to spawn each batch
-	UPROPERTY(EditAnywhere, Category = "Foliage|BranchGeneration", meta = (EditCondition = "bGenerateBranches"))
-	int BranchBatchSize = 50;
-
-	//Branch types and their respective data for generation
-	UPROPERTY(EditAnywhere, Category = "Foliage|BranchGeneration", meta = (EditCondition = "bGenerateBranches"))
-	TArray<class UFoliageDataAsset*> BranchData; 
-
 	/**
 	 * Initializes tiles for the specified drawing distance
 	 *
@@ -234,6 +214,7 @@ private:
 	//Threads that create locations for a specific foliage component
 	TArray<FFoliageGenerationThread*> FoliageGenerationThreads;
 
+	//Tiles that are marked to be deleted
 	TQueue<AProceduralTile*> TilesToDelete;
 
 	//Currently running thread
@@ -255,25 +236,60 @@ private:
 	float CurrentUpdateTime = 0.f;
 
 	/**
-	 * Delets all tiles in the Tiles-Map
-	 */
-	void DeleteAllTiles();
-
-	/**
 	 * Sets up the parameters needed for the tile generation.
 	 *
 	 * \return the parameters that will be used for the tile generation
 	 */
 	FTileGenerationParams SetupTileGenerationParams();
 
-	void SpawnNewFoliage();
-
-	void InitializeFoliageThread();
-
-	void DeleteSingleTile();
-
-	void GenerateFoliage(FTileIndex CurrentTileIndex, AProceduralTile* CurrentTile);
-
+	/**
+	 * Generates a new tile for the provided index.
+	 * 
+	 * \param CurrentTileIndex the index to generate the tile for
+	 * \return the genrated tile
+	 */
 	AProceduralTile* GenerateTile(FTileIndex CurrentTileIndex);
 
+	/**
+	 * Generates the Foliage for the provided tile
+	 *
+	 * \param CurrentTileIndex the index of the tile
+	 * \param CurrentTile the tile to generate foliage for
+	 */
+	void GenerateFoliage(FTileIndex CurrentTileIndex, AProceduralTile* CurrentTile);
+
+	/**
+	 * Starts a new thread for the foliage generation for a single FoliageGenerationComponent
+	 *
+	 */
+	void InitializeFoliageThread();
+
+	/**
+	 * Spawns the generated foliage for the first element of FoliageComponentsToUpdate.
+	 *
+	 */
+	void SpawnNewFoliage();
+
+	/**
+	 *Sorts the FoliageGenerationThreads by the distance to the CenterTileIndex
+	 * 
+	 */
+	void SortFoliageGenerationThreads();
+
+	/**
+	 * Sorts the FoliageComponentsToUpdate by the distance to the CenterTileIndex
+	 * 
+	 */
+	void SortFoliageComponentsToUpdate();
+
+	/**
+	 * Delets all tiles in the Tiles-Map
+	 */
+	void DeleteAllTiles();
+
+	/**
+	 * Deletes the first tile in TilesToDelete
+	 *
+	 */
+	void DeleteSingleTile();
 };

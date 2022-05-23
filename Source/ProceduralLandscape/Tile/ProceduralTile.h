@@ -28,6 +28,10 @@ struct FTileIndex
 		return Equals(Other);
 	}
 
+	bool operator!=(const FTileIndex& Other) const {
+		return !Equals(Other);
+	}
+
 	bool Equals(const FTileIndex& Other) const
 	{
 		return X == Other.X && Y == Other.Y;
@@ -91,12 +95,31 @@ public:
 	UFUNCTION()
 	void OnBeginOverlap (UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	
-	//Sets up proberties which aren't changing at runtime
-	void Setup(class ATileGenerator* Tilegenerator_In, TSubclassOf<class ACharacter> PlayerClass_In, UMaterialInterface* Material, bool bGenerateTrees = false, bool bGenerateGrass = false, bool bGenerateBushes = false, bool bGenerateBranches = false);
+	/**
+	 * Sets up essential variables of the tile.
+	 * 
+	 * \param Tilegenerator_In the tile generator of the game instance
+	 * \param PlayerClass_In the class that is used by the player
+	 * \param Material the material that should be applied to the landscape
+	 * \param bGenerateTrees if trees should be generated
+	 * \param bGenerateGrass if grass should be generated
+	 * \param bGenerateBushes if bushes should be generated
+	 */
+	void Setup(class ATileGenerator* Tilegenerator_In, TSubclassOf<class ACharacter> PlayerClass_In, UMaterialInterface* Material, bool bGenerateTrees = false, bool bGenerateGrass = false, bool bGenerateBushes = false);
 	
-	//Procedurally generates a tile using ProceduralMeshComponent
+	/**
+	 * Procedurally generates a tile using ProceduralMeshComponent.
+	 * 
+	 * \param TileGenerationParams the parameters needed to generate a tile
+	 * \param bIsUpdate if the tile should be updated or created
+	 */
 	void GenerateTile(FTileGenerationParams TileGenerationParams, bool bIsUpdate = false);
 
+	/**
+	 * Checks if the generation of locations for all foliage components is finished.
+	 * 
+	 * \return true if tile is marked as deleted or all foliage components have finished their generation
+	 */
 	bool IsGenerationFinished();
 
 	class UFoliageGenerationComponent* GetTreeGenerationComponent() {
@@ -111,9 +134,6 @@ public:
 		return BushGenerationComponent;
 	}
 
-	class UFoliageGenerationComponent* GetBranchGenerationComponent() {
-		return BranchGenerationComponent;
-	}
 
 	FTileIndex GetTileIndex() {
 		return TileIndex;
@@ -152,10 +172,6 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	class UFoliageGenerationComponent* BushGenerationComponent; 
 
-	//Component for generating branches
-	UPROPERTY(VisibleAnywhere)
-	class UFoliageGenerationComponent* BranchGenerationComponent; 
-
 	//Class that is used by the player actor
 	UPROPERTY()
 	TSubclassOf<class ACharacter> PlayerClass;
@@ -176,10 +192,18 @@ private:
 	UPROPERTY()
 	float MinZPosition;
 
+	//Is the tile ready to be deleted
 	UPROPERTY()
 	bool bMarkedToDelete;
 
-	void SetupFoliageComponents(bool bGenerateTrees, bool bGenerateGrass, bool bGenerateBushes, bool bGenerateBranches);
+	/**
+	 * Sets up all desired foliage generation components.
+	 * 
+	 * \param bGenerateTrees should trees be generated
+	 * \param bGenerateGrass should grass be generated
+	 * \param bGenerateBushes should bushes be generated
+	 */
+	void SetupFoliageComponents(bool bGenerateTrees, bool bGenerateGrass, bool bGenerateBushes);
 
 	/**
 	 * Generates the triangles for the vertex at postion CurrentRow, CurrentColumn

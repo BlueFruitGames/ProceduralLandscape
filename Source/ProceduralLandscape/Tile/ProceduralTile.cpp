@@ -28,13 +28,13 @@ AProceduralTile::AProceduralTile()
 
 
 
-void AProceduralTile::Setup(ATileGenerator* Tilegenerator_In, TSubclassOf<ACharacter> PlayerClass_In, UMaterialInterface* Material, bool bGenerateTrees, bool bGenerateGrass, bool bGenerateBushes, bool bGenerateBranches)
+void AProceduralTile::Setup(ATileGenerator* Tilegenerator_In, TSubclassOf<ACharacter> PlayerClass_In, UMaterialInterface* Material, bool bGenerateTrees, bool bGenerateGrass, bool bGenerateBushes)
 {	
 	TileGenerator = Tilegenerator_In;
 	PlayerClass = PlayerClass_In.Get();
 	if (ProceduralMeshComponent) ProceduralMeshComponent->SetMaterial(0, Material);
 	if(BoxComponent) BoxComponent->OnComponentBeginOverlap.AddDynamic(this, &AProceduralTile::OnBeginOverlap);
-	SetupFoliageComponents(bGenerateTrees, bGenerateGrass, bGenerateBushes, bGenerateBranches);
+	SetupFoliageComponents(bGenerateTrees, bGenerateGrass, bGenerateBushes);
 }
 
 
@@ -73,7 +73,7 @@ void AProceduralTile::GenerateTile(FTileGenerationParams TileGenerationParams, b
 	}
 }
 
-void AProceduralTile::SetupFoliageComponents(bool bGenerateTrees, bool bGenerateGrass, bool bGenerateBushes, bool bGenerateBranches)
+void AProceduralTile::SetupFoliageComponents(bool bGenerateTrees, bool bGenerateGrass, bool bGenerateBushes)
 {
 	if (bGenerateTrees) {
 		TreeGenerationComponent = NewObject<UFoliageGenerationComponent>(this, TEXT("TreeGenerationComponent"));
@@ -89,11 +89,6 @@ void AProceduralTile::SetupFoliageComponents(bool bGenerateTrees, bool bGenerate
 		BushGenerationComponent = NewObject<UFoliageGenerationComponent>(this, TEXT("BushGenerationComponent"));
 		BushGenerationComponent->SetMobility(EComponentMobility::Static);
 		BushGenerationComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
-	}
-	if (bGenerateBranches) {
-		BranchGenerationComponent = NewObject<UFoliageGenerationComponent>(this, TEXT("BranchGenerationComponent"));
-		BranchGenerationComponent->SetMobility(EComponentMobility::Static);
-		BranchGenerationComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 	}
 }
 
@@ -230,7 +225,6 @@ bool AProceduralTile::IsGenerationFinished()
 	if (TreeGenerationComponent) bIsFinished &= TreeGenerationComponent->GetIsGenerationFinished();
 	if (GrassGenerationComponent) bIsFinished &= GrassGenerationComponent->GetIsGenerationFinished();
 	if (BushGenerationComponent) bIsFinished &= BushGenerationComponent->GetIsGenerationFinished();
-	if (BranchGenerationComponent) bIsFinished &= BranchGenerationComponent->GetIsGenerationFinished();
 	return bIsFinished;
 }
 
